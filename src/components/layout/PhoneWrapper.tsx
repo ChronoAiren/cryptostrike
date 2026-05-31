@@ -7,6 +7,7 @@ interface PhoneWrapperProps {
 
 export const PhoneWrapper: React.FC<PhoneWrapperProps> = ({ children }) => {
   return (
+<<<<<<< HEAD
     <div className={styles.container}>
       <div className={styles.phoneFrame}>
         <div className={styles.statusBar}>
@@ -32,6 +33,11 @@ export const PhoneWrapper: React.FC<PhoneWrapperProps> = ({ children }) => {
         <div className={styles.homeIndicatorBar}>
           <div className={styles.homeIndicator}></div>
         </div>
+=======
+    <div className={styles.wrapper}>
+      <div className={styles.phoneFrame}>
+        {children}
+>>>>>>> 859e210 (Responsive layout: phone-frame container centered on desktop, fix overlay positioning (fixed→absolute))
       </div>
     </div>
   );

@@ -13,7 +13,7 @@ export const ExitConfirmDialog: React.FC<ExitConfirmProps> = ({ visible, onStay,
     <div
       onClick={onStay}
       style={{
-        position: 'fixed',
+        position: 'absolute',
         inset: 0,
         zIndex: 8000,
         display: 'flex',

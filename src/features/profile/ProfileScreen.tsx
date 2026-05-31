@@ -37,7 +37,7 @@ export const ProfileScreen: React.FC = () => {
     }}>
       {/* Grid bg */}
       <div style={{
-        position: 'fixed', inset: 0,
+        position: 'absolute', inset: 0,
         backgroundImage: `
           linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
           linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px)

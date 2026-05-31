@@ -15,7 +15,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ item, gold, gems, 
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 100,
+      position: 'absolute', inset: 0, zIndex: 100,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
       padding: '20px',
