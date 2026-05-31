@@ -60,7 +60,7 @@ html {
 }
 
 body {
-  background-color: var(--bg-deep);
+  background-color: #2F2C3D;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -81,11 +81,16 @@ body {
   align-items: center;
 }
 
-/* Mobile-first responsive breakpoints */
+/* Mobile screens - use full screen */
 @media screen and (max-width: 768px) {
+  body {
+    background-color: var(--bg-deep);
+  }
+
   #root {
     align-items: stretch;
   }
+
   html {
     font-size: 13px;
   }

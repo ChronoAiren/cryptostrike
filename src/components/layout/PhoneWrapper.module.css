@@ -1,6 +1,17 @@
+.container {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #2F2C3D;
+  overflow: hidden;
+}
+
 .phoneFrame {
   width: var(--phone-width);
   height: var(--phone-height);
+  max-height: 100vh;
   background-color: var(--bg-deep);
   border: 3px solid var(--border-dim);
   border-radius: 40px;
@@ -36,7 +47,7 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 101;
-  box-shadow: inset 0 -2px 5px rgba(0,0,0,0.5);
+  box-shadow: inset 0 -2px 5px rgba(0, 0, 0, 0.5);
 }
 
 .statusTime {
@@ -80,17 +91,113 @@
   border-radius: 2px;
 }
 
-/* Responsiveness for mobile web viewing */
-@media (max-width: 768px) {
+/* Responsive scaling - phone frame always visible */
+@media screen and (max-width: 375px) {
   .phoneFrame {
     width: 100vw;
     height: 100vh;
+    max-height: 100vh;
     border-radius: 0;
     border: none;
     box-shadow: none;
   }
-  
+
+  .container {
+    background-color: var(--bg-deep);
+  }
+
   .notch {
     display: none;
+  }
+
+  .statusBar {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+
+  .homeIndicatorBar {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+
+/* Small phones - fit to screen */
+@media screen and (min-width: 376px) and (max-width: 414px) {
+  .phoneFrame {
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  .container {
+    background-color: var(--bg-deep);
+  }
+
+  .notch {
+    width: 120px;
+    height: 18px;
+  }
+}
+
+/* Medium phones - fit to screen */
+@media screen and (min-width: 415px) and (max-width: 768px) {
+  .phoneFrame {
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  .container {
+    background-color: var(--bg-deep);
+  }
+
+  .notch {
+    width: 140px;
+    height: 22px;
+  }
+}
+
+/* Tablet landscape and larger - show phone frame */
+@media screen and (min-width: 769px) {
+  .container {
+    background-color: #2F2C3D;
+    background-image:
+      radial-gradient(circle at 20% 50%, rgba(243, 195, 125, 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 80% 50%, rgba(147, 229, 177, 0.03) 0%, transparent 50%);
+  }
+
+  .phoneFrame {
+    width: var(--phone-width);
+    height: var(--phone-height);
+    border-radius: 40px;
+    border: 3px solid var(--border-dim);
+    box-shadow:
+      0 10px 40px rgba(0, 0, 0, 0.6),
+      0 0 80px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Desktop - larger phone frame with zoom */
+@media screen and (min-width: 1025px) and (min-height: 900px) {
+  .phoneFrame {
+    transform: scale(1.1);
+  }
+}
+
+/* Large desktop - even larger phone frame */
+@media screen and (min-width: 1440px) and (min-height: 1000px) {
+  .phoneFrame {
+    transform: scale(1.25);
+  }
+}
+
+/* Ultra-wide screens - position phone frame */
+@media screen and (min-aspect-ratio: 21/9) {
+  .phoneFrame {
+    transform: scale(0.95);
   }
 }
