@@ -1,0 +1,73 @@
+{
+  "frameSize": 16,
+  "frameWidth": 16,
+  "frameHeight": 20,
+  "spriteSheetSize": 256,
+  "layerOrder": ["body"],
+  "useGandalfSprites": false,
+  "useReferenceSprite": true,
+  "referenceSprite": "character_one.png",
+  "referenceFrames": 4,
+  "fps": {
+    "idle": 6,
+    "attack": 12,
+    "defend": 8,
+    "hurt": 10,
+    "victory": 8
+  },
+  "frameCounts": {
+    "idle": 4,
+    "attack": 4,
+    "defend": 4,
+    "hurt": 4,
+    "victory": 4
+  },
+  "characters": [
+    "char_one",
+    "char_two",
+    "char_three",
+    "char_four",
+    "char_five",
+    "char_six"
+  ],
+  "wearables": {
+    "barmor": { "slot": "clothing", "prefix": "outfit" },
+    "sblade": { "slot": "hand", "prefix": "weapon" },
+    "nboots": { "slot": "clothing", "prefix": "boots" },
+    "head1":  { "slot": "clothing", "prefix": "head" },
+    "body1":  { "slot": "clothing", "prefix": "body" },
+    "boots1": { "slot": "clothing", "prefix": "boots" },
+    "lshield": { "slot": "hand", "prefix": "shield" },
+    "bflag": { "slot": "hand", "prefix": "flag" }
+  },
+  "itemUiIds": [
+    "sblade",
+    "barmor",
+    "wsurge",
+    "fud",
+    "hstone",
+    "lshield",
+    "airdrop",
+    "bflag",
+    "nboots",
+    "head1",
+    "body1",
+    "boots1"
+  ],
+  "characterColors": {
+    "char_one":   "#60C8F0",
+    "char_two":   "#6EE7A0",
+    "char_three": "#7B8FD4",
+    "char_four":  "#E0924A",
+    "char_five":  "#F0A0C8",
+    "char_six":   "#E86070"
+  },
+  "characterSprites": {
+    "char_one":   "character_one.png",
+    "char_two":   "character_two.png",
+    "char_three": "character_three.png",
+    "char_four":  "character_four.png",
+    "char_five":  "character_five.png",
+    "char_six":   "character_six.png"
+  }
+}

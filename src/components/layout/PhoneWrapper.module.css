@@ -1,0 +1,96 @@
+.phoneFrame {
+  width: var(--phone-width);
+  height: var(--phone-height);
+  background-color: var(--bg-deep);
+  border: 3px solid var(--border-dim);
+  border-radius: 40px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.statusBar {
+  height: 36px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 20px 6px;
+  background-color: var(--bg-deep);
+  position: relative;
+  z-index: 100;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.notch {
+  width: 130px;
+  height: 20px;
+  background-color: #12111A;
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 101;
+  box-shadow: inset 0 -2px 5px rgba(0,0,0,0.5);
+}
+
+.statusTime {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-family: var(--font-main);
+  letter-spacing: -0.1px;
+}
+
+.statusIcons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--text-secondary);
+  opacity: 0.85;
+}
+
+.screenContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-deep);
+}
+
+.homeIndicatorBar {
+  height: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--bg-deep);
+  padding-bottom: 2px;
+}
+
+.homeIndicator {
+  width: 115px;
+  height: 4px;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+/* Responsiveness for mobile web viewing */
+@media (max-width: 768px) {
+  .phoneFrame {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+  
+  .notch {
+    display: none;
+  }
+}
