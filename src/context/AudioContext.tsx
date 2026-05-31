@@ -12,7 +12,8 @@ type SoundType =
   | 'level'
   | 'buff'
   | 'buy'
-  | 'ko';
+  | 'ko'
+  | 'cancel';
 
 interface AudioContextProps {
   playSound: (type: SoundType) => void;
@@ -68,6 +69,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         buff: { f: 659, f2: 880, dur: 0.2, shape: 'sine', vol: 0.06 },
         buy: { f: 440, f2: 659, dur: 0.12, shape: 'sine', vol: 0.05 },
         ko: { f: 150, f2: 50, dur: 0.5, shape: 'sawtooth', vol: 0.12 },
+        cancel: { f: 300, f2: 150, dur: 0.15, shape: 'square', vol: 0.04 },
       };
 
       const s = sounds[type] || sounds.tick;
