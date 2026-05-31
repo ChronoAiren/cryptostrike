@@ -67,14 +67,10 @@ body {
   min-height: 100vh;
   font-family: var(--font-main);
   color: var(--text-primary);
-<<<<<<< HEAD
-  overflow: hidden;
-  margin: 0;
-  padding: 0;
-=======
   overflow-x: hidden;
   overflow-y: auto;
->>>>>>> 859e210 (Responsive layout: phone-frame container centered on desktop, fix overlay positioning (fixed→absolute))
+  margin: 0;
+  padding: 0;
 }
 
 #root {
