@@ -85,6 +85,7 @@ export interface DamageReport {
   playerDamage: number;
   enemyDamage: number;
   playerEffectType: string;
+  abilityType?: 'atk' | 'def';
   isCrit: boolean;
   degenComebackTriggered: boolean;
   playerFinalMult: number;

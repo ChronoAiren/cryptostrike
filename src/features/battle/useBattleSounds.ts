@@ -13,6 +13,11 @@ const SOUND_DIRS: Record<string, string> = {
 
 export function useBattleSounds() {
   const cache = useRef<Map<string, HTMLAudioElement>>(new Map());
+  const volumeRef = useRef(0.5);
+
+  const setVolume = useCallback((v: number) => {
+    volumeRef.current = v;
+  }, []);
 
   const getAudio = useCallback((key: string): HTMLAudioElement | null => {
     let a = cache.current.get(key);
@@ -23,6 +28,7 @@ export function useBattleSounds() {
       cache.current.set(key, a);
     }
     a.currentTime = 0;
+    a.volume = volumeRef.current;
     return a;
   }, []);
 
@@ -34,5 +40,5 @@ export function useBattleSounds() {
     if (a) a.play().catch(() => {});
   }, [getAudio]);
 
-  return { play };
+  return { play, setVolume };
 }

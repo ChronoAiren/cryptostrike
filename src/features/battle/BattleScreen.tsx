@@ -123,7 +123,14 @@ export const BattleScreen: React.FC = () => {
       spawnDmg(dc, '-' + damageReport.playerDamage, damageReport.isCrit ? 'dmg-wht' : 'dmg-gold', 60, 30);
       if (damageReport.isCrit) setTimeout(() => spawnDmg(dc, 'CRIT!', 'dmg-wht', 46, 10), 100);
     }
-    if (turnOwner === 'player' && damageReport.playerEffectType === 'buf') spawnDmg(dc, '▲ATK', 'dmg-gold', 55, 55);
+    if (turnOwner === 'player' && damageReport.playerEffectType === 'buf') {
+      const txt = damageReport.abilityType === 'def' ? '▲DEF' : '▲ATK';
+      spawnDmg(dc, txt, 'dmg-gold', 55, 55);
+    }
+    if (turnOwner === 'player' && damageReport.playerEffectType === 'deb' && damageReport.abilityType) {
+      const txt = damageReport.abilityType === 'atk' ? '▼ATK' : '▼DEF';
+      spawnDmg(dc, txt, 'dmg-gold', 55, 65);
+    }
     if (turnOwner === 'player' && damageReport.playerEffectType === 'def') spawnDmg(dc, 'SHIELD', 'dmg-gold', 46, 55);
     if (turnOwner === 'enemy' && damageReport.enemyDamage > 0) {
       spawnDmg(dc, '-' + damageReport.enemyDamage, 'dmg-red', 210, 70);
@@ -448,7 +455,7 @@ export const BattleScreen: React.FC = () => {
         <div ref={dmgcRef} className="dmg-cont" />
 
         {/* ═══ VFX Overlays ═══ */}
-        {animationPhase === 'impact' && damageReport && (() => {
+        {(animationPhase === 'launch' || animationPhase === 'impact') && damageReport && (() => {
           const dr = damageReport;
           const isPlayerTurn = turnOwner === 'player';
           const isEnemyTurn = turnOwner === 'enemy';

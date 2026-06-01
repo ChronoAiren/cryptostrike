@@ -254,10 +254,22 @@ export const HomeScreen: React.FC = () => {
             style={{
               fontSize: '9px', color: 'var(--text-muted)', fontFamily: 'var(--font-pixel)',
               letterSpacing: '0.5px', cursor: 'pointer', transition: 'color 0.15s ease',
-              display: 'flex', alignItems: 'center', gap: '5px',
+              display: 'flex', alignItems: 'center', gap: '8px',
             }}
           >
             {user.avatar} {user.username.toUpperCase()}
+            <span
+              onClick={e => { e.stopPropagation(); setScreen('settings'); }}
+              style={{
+                fontSize: '14px', cursor: 'pointer', opacity: 0.5,
+                transition: 'opacity 0.15s ease', lineHeight: 1,
+              }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '0.5')}
+              title="Settings"
+            >
+              ⚙️
+            </span>
           </div>
         </div>
 

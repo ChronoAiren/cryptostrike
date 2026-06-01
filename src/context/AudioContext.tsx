@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef } from 'react';
+import React, { createContext, useContext, useRef, useState } from 'react';
 
 type SoundType =
   | 'select'
@@ -19,12 +19,15 @@ type SoundType =
 interface AudioContextProps {
   playSound: (type: SoundType) => void;
   initAudio: () => void;
+  vfxVolume: number;
+  setVfxVolume: (v: number) => void;
 }
 
 const AudioContext = createContext<AudioContextProps | undefined>(undefined);
 
 export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const [vfxVolume, setVfxVolume] = useState(0.5);
 
   const initAudio = () => {
     if (!audioCtxRef.current) {
@@ -79,7 +82,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       o.frequency.setValueAtTime(s.f, t);
       o.frequency.exponentialRampToValueAtTime(s.f2, t + s.dur);
 
-      g.gain.setValueAtTime(s.vol, t);
+      g.gain.setValueAtTime(s.vol * vfxVolume, t);
       g.gain.exponentialRampToValueAtTime(0.001, t + s.dur + 0.05);
 
       o.start(t);
@@ -90,7 +93,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   return (
-    <AudioContext.Provider value={{ playSound, initAudio }}>
+    <AudioContext.Provider value={{ playSound, initAudio, vfxVolume, setVfxVolume }}>
       {children}
     </AudioContext.Provider>
   );

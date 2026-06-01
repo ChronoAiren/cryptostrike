@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import {
   type ClassKey,
   type ClassDefinition,
@@ -25,10 +25,12 @@ interface UserProfile {
   purchasedItems: string[];
   gold: number;
   gems: number;
+  bgmVolume: number;
+  vfxVolume: number;
 }
 
 interface GameStateContextProps {
-  currentScreen: 'splash' | 'welcome' | 'home' | 'profile' | 'myCharacter' | 'items' | 'classSelect' | 'itemEquip' | 'coinChoose' | 'vs' | 'battle' | 'end';
+  currentScreen: 'splash' | 'welcome' | 'home' | 'profile' | 'myCharacter' | 'items' | 'classSelect' | 'itemEquip' | 'coinChoose' | 'vs' | 'battle' | 'end' | 'settings';
   selectedClass: ClassKey | null;
   equippedItems: string[];
   selectedCoin: Coin | null;
@@ -84,10 +86,12 @@ interface GameStateContextProps {
   changeClass: () => void;
   setTimerPaused: (paused: boolean) => void;
   setUsername: (name: string) => void;
-  setScreen: (s: 'splash' | 'welcome' | 'home' | 'profile' | 'myCharacter' | 'items' | 'classSelect') => void;
+  setScreen: (s: 'splash' | 'welcome' | 'home' | 'profile' | 'myCharacter' | 'items' | 'classSelect' | 'settings') => void;
   updateProfile: (fields: { username?: string; avatar?: string; bio?: string; cosmeticItems?: string[] }) => void;
   toggleCosmeticItem: (id: string) => void;
   purchaseItem: (id: string, currency: 'gold' | 'gems') => void;
+  updateVolume: (key: 'bgmVolume' | 'vfxVolume', value: number) => void;
+  vfxVolume: number;
 }
 
 const GameContext = createContext<GameStateContextProps | undefined>(undefined);
@@ -200,7 +204,7 @@ const AIS = [
 ];
 
 export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { playSound } = useAudio();
+  const { playSound, setVfxVolume } = useAudio();
   const battleSfx = useBattleSounds();
 
   // User profile (persisted)
@@ -223,10 +227,12 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             : [...FREE_ITEM_IDS],
           gold: parsed.gold ?? 500,
           gems: parsed.gems ?? 10,
+          bgmVolume: parsed.bgmVolume ?? 0.3,
+          vfxVolume: parsed.vfxVolume ?? 0.5,
         };
       }
     } catch {}
-    return { username: '', avatar: '⚔️', bio: '', createdAt: '', gamesPlayed: 0, wins: 0, totalDamage: 0, cosmeticItems: [], purchasedItems: [...FREE_ITEM_IDS], gold: 500, gems: 10 };
+    return { username: '', avatar: '⚔️', bio: '', createdAt: '', gamesPlayed: 0, wins: 0, totalDamage: 0, cosmeticItems: [], purchasedItems: [...FREE_ITEM_IDS], gold: 500, gems: 10, bgmVolume: 0.3, vfxVolume: 0.5 };
   });
 
   useEffect(() => {
@@ -277,7 +283,15 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   };
 
-  const setScreen = (s: 'splash' | 'welcome' | 'home' | 'profile' | 'myCharacter' | 'items' | 'classSelect') => {
+  const updateVolume = useCallback((key: 'bgmVolume' | 'vfxVolume', value: number) => {
+    setUser(prev => ({ ...prev, [key]: value }));
+    if (key === 'vfxVolume') {
+      setVfxVolume(value);
+      battleSfx.setVolume(value);
+    }
+  }, [setVfxVolume, battleSfx]);
+
+  const setScreen = (s: 'splash' | 'welcome' | 'home' | 'profile' | 'myCharacter' | 'items' | 'classSelect' | 'settings') => {
     setCurrentScreen(s);
   };
 
@@ -287,7 +301,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   // Screen routing — start at splash, skip welcome if returning user
-  const [currentScreen, setCurrentScreen] = useState<'splash' | 'welcome' | 'home' | 'profile' | 'myCharacter' | 'items' | 'classSelect' | 'itemEquip' | 'coinChoose' | 'vs' | 'battle' | 'end'>(() => {
+  const [currentScreen, setCurrentScreen] = useState<'splash' | 'welcome' | 'home' | 'profile' | 'myCharacter' | 'items' | 'classSelect' | 'itemEquip' | 'coinChoose' | 'vs' | 'battle' | 'end' | 'settings'>(() => {
     try {
       const stored = localStorage.getItem('cryptostrike_user');
       if (stored) {
@@ -368,54 +382,64 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const liveChartIntervalRef = useRef<any>(null);
   const marketIntervalRef = useRef<any>(null);
 
-  // Background ambient sound
-  const bgAudioRef = useRef<OscillatorNode | null>(null);
+  // Background music (BGM)
+  const bgmRef = useRef<HTMLAudioElement | null>(null);
+  const bgmVolumeRef = useRef(user.bgmVolume);
 
-  // Background sound effects
+  bgmVolumeRef.current = user.bgmVolume;
+
   useEffect(() => {
-    if (currentScreen === 'battle') {
-      // Create faint ambient background sound using Web Audio API
-      if (!bgAudioRef.current) {
-        try {
-          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-          const oscillator = audioContext.createOscillator();
-          const gainNode = audioContext.createGain();
+    const a = bgmRef.current;
+    if (a) { a.pause(); a.src = ''; }
 
-          oscillator.type = 'sine';
-          oscillator.frequency.setValueAtTime(110, audioContext.currentTime); // Low frequency for ambient
-          gainNode.gain.setValueAtTime(0.02, audioContext.currentTime); // Very faint volume
+    const play = (track: string, loop: boolean, onEnd?: () => void) => {
+      const audio = new Audio(`/battle_sound/background/${track}.mp3`);
+      audio.loop = loop;
+      audio.volume = bgmVolumeRef.current;
+      if (onEnd) audio.addEventListener('ended', onEnd);
+      audio.play().catch(() => {});
+      bgmRef.current = audio;
+    };
 
-          oscillator.connect(gainNode);
-          gainNode.connect(audioContext.destination);
-          oscillator.start();
+    const onceThenLoop = (intro: string, loop: string) => {
+      play(intro, false, () => play(loop, true));
+    };
 
-          bgAudioRef.current = oscillator;
-        } catch (e) {
-          // Ignore audio errors
-        }
-      }
+    if (currentScreen === 'vs') {
+      play('opponent_search', true);
+    } else if (currentScreen === 'battle') {
+      onceThenLoop('opponent_found', 'in_battle');
+    } else if (currentScreen === 'end') {
+      if (winRecord === true) onceThenLoop('winner_start', 'winner_end');
+      else if (winRecord === false) onceThenLoop('defeat_start', 'defeat_end');
+      else { if (bgmRef.current) a?.pause(); }
+    } else if (currentScreen === 'home' || currentScreen === 'welcome' || currentScreen === 'profile' || currentScreen === 'myCharacter' || currentScreen === 'items' || currentScreen === 'classSelect' || currentScreen === 'itemEquip' || currentScreen === 'coinChoose' || currentScreen === 'settings') {
+      play('homepage', true);
     } else {
-      // Stop background sound when not in battle
-      if (bgAudioRef.current) {
-        try {
-          bgAudioRef.current.stop();
-          bgAudioRef.current = null;
-        } catch (e) {
-          // Ignore errors when stopping
-        }
-      }
+      if (bgmRef.current) a?.pause();
     }
 
     return () => {
-      if (bgAudioRef.current) {
-        try {
-          bgAudioRef.current.stop();
-        } catch (e) {
-          // Ignore errors
-        }
+      if (bgmRef.current) {
+        bgmRef.current.pause();
+        bgmRef.current.src = '';
+        bgmRef.current = null;
       }
     };
-  }, [currentScreen]);
+  }, [currentScreen, winRecord]);
+
+  // Keep BGM volume in sync when user.bgmVolume changes
+  useEffect(() => {
+    if (bgmRef.current) {
+      bgmRef.current.volume = user.bgmVolume;
+    }
+  }, [user.bgmVolume]);
+
+  // Sync VFX volume to AudioContext and battle sounds on mount/change
+  useEffect(() => {
+    setVfxVolume(user.vfxVolume);
+    battleSfx.setVolume(user.vfxVolume);
+  }, [user.vfxVolume, setVfxVolume, battleSfx]);
 
   // 1. Initial State Handlers
   const selectClass = (key: ClassKey) => {
@@ -881,6 +905,8 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     let pdmg = 0;
     let peff = '';
     let edmg = 0;
+    let isAtkBuff: boolean | undefined;
+    let isAtkDebuff: boolean | undefined;
 
     // Player action processing
     let holdHeal = 0;
@@ -899,12 +925,12 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (selectedClass === 'char_four' && pdmg > 0 && pcorr) {
         nextPlayerBuffs.push({ type: 'atk', multiplier: Math.min(1.6 / effectiveAtk, 1.05), roundsRemaining: 999 });
       } else if (selectedClass === 'char_four' && !pcorr) {
-        // wrong trade resets blood rush stacks
-        nextPlayerBuffs.length = 0;
+        // wrong trade resets blood rush stacks only
+        nextPlayerBuffs = nextPlayerBuffs.filter(b => !(b.type === 'atk' && b.multiplier));
       }
       setBattleLog((prev) => [...prev, `⚔️ ATTACK - Raw: ${raw.toFixed(1)}, DEF: ${effectiveEnemyDef}, Final: ${pdmg}`]);
     } else if (action === 'debuff') {
-      const isAtkDebuff = Math.random() < 0.5;
+      isAtkDebuff = Math.random() < 0.5;
       const debuffMult = pcorr ? 0.7 : 0.85;
       const defReduction = pcorr ? 0.15 : 0.08;
       const dur = (isRanger && pcorr) ? 4 : pcorr ? 3 : 2;
@@ -924,7 +950,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
       peff = 'deb';
     } else if (action === 'buff') {
-      const isAtkBuff = Math.random() < 0.5;
+      isAtkBuff = Math.random() < 0.5;
       // +1 duration because BUFF has no same-round effect (player already acted)
       const dur = (isRanger && pcorr) ? 5 : pcorr ? 4 : 3;
       if (isAtkBuff) {
@@ -1014,6 +1040,14 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       prev ? { ...prev, hp: newPlayerHp, buffs: nextPlayerBuffs } : null
     );
 
+    // Determine ability subtype for VFX display
+    let abilityType: 'atk' | 'def' | undefined = undefined;
+    if (peff === 'buf' && action === 'buff') {
+      abilityType = isAtkBuff ? 'atk' : 'def';
+    } else if (peff === 'deb' && action === 'debuff') {
+      abilityType = isAtkDebuff ? 'atk' : 'def';
+    }
+
     setDamageReport({
       playerCorrect: pcorr,
       playerMove: marketMove,
@@ -1021,6 +1055,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       playerDamage: pdmg,
       enemyDamage: edmg,
       playerEffectType: peff,
+      abilityType,
       isCrit,
       degenComebackTriggered: forceGood,
       playerFinalMult: tr,
@@ -1332,6 +1367,8 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         updateProfile,
         toggleCosmeticItem,
         purchaseItem,
+        updateVolume,
+        vfxVolume: user.vfxVolume,
       }}
     >
       {children}

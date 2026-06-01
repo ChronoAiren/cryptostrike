@@ -16,6 +16,7 @@ import { CoinChooseScreen } from './features/coinSelection/CoinChooseScreen';
 import { BattleScreen } from './features/battle/BattleScreen';
 import { VSScreen } from './features/battle/VSScreen';
 import { EndScreen } from './features/gameSummary/EndScreen';
+import { SettingsScreen } from './features/settings/SettingsScreen';
 import { VfxTestScreen } from './features/sprites/VfxTestScreen';
 
 const MainApp: React.FC = () => {
@@ -50,6 +51,8 @@ const MainApp: React.FC = () => {
         return <BattleScreen />;
       case 'end':
         return <EndScreen />;
+      case 'settings':
+        return <SettingsScreen />;
       default:
         return <SplashScreen />;
     }
