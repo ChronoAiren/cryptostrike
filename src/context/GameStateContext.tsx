@@ -1033,18 +1033,27 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             setTimeout(() => {
               callback();
             }, 250);
-          }, 400);
-        }, 350);
-      }, 250);
+          }, 450);
+        }, 400);
+      }, 300);
+    };
+
+    const effectActionMap: Record<string, string> = {
+      atk: 'attack',
+      deb: 'debuff',
+      def: 'defense',
+      buf: 'buff',
+      hold: 'heal',
     };
 
     // Player's turn first (attack or self-effect)
     const doPlayerTurn = () => {
       if (hasPlayerAttack) {
+        const actionName = effectActionMap[effect] || 'attack';
         runTurn('player',
           () => {
             setIsPlayerAttacking(true);
-            battleSfx.play('attack', 'start');
+            battleSfx.play(actionName, 'start');
           },
           () => {
             setIsEnemyHit(true);
@@ -1053,7 +1062,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               setTimeout(() => setShowCritFlash(false), 120);
             }
             setShowDamageNumber(true);
-            battleSfx.play('attack', 'end');
+            battleSfx.play(actionName, 'end');
           },
           () => {
             setIsPlayerAttacking(false);
@@ -1063,16 +1072,14 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           },
         );
       } else if (hasSelfEffect) {
+        const actionName = effectActionMap[effect] || '';
         runTurn('player',
           () => {
-            if (effect === 'hold') battleSfx.play('attack', 'start');
+            battleSfx.play(actionName, 'start');
           },
           () => {
             setShowDamageNumber(true);
-            if (effect === 'hold') {
-              battleSfx.play('attack', 'end');
-              playSound('heal');
-            }
+            battleSfx.play(actionName, 'end');
           },
           () => {
             setShowDamageNumber(false);
