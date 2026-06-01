@@ -133,7 +133,12 @@ export const BattleScreen: React.FC = () => {
 
   if (!playerState || !enemyState || !selectedCoin) return null;
 
-  const playerHpPct = gbaHpPct(playerState.hp, playerState.maxHp);
+  // During player's turn animation, enemy damage hasn't visually happened yet
+  const pendingEnemyDmg = turnOwner === 'player' && animationPhase !== 'idle'
+    ? (damageReport?.enemyDamage ?? 0)
+    : 0;
+  const displayPlayerHp = Math.min(playerState.maxHp, playerState.hp + pendingEnemyDmg);
+  const playerHpPct = gbaHpPct(displayPlayerHp, playerState.maxHp);
   const enemyHpPct = gbaHpPct(enemyState.hp, enemyState.maxHp);
 
   // Effective stats from buffs/debuffs for realtime display
@@ -300,7 +305,7 @@ export const BattleScreen: React.FC = () => {
                 {user.avatar} {user.username.toUpperCase()}
               </span>
               <span style={{ fontFamily: 'var(--font-pixel)', fontSize: '5px', color: 'var(--gba-dim)' }}>
-                Lv{Math.ceil(playerState.hp / 20)}
+                Lv{Math.ceil(displayPlayerHp / 20)}
               </span>
             </div>
 
@@ -309,14 +314,14 @@ export const BattleScreen: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
                 <span style={{ fontFamily: 'var(--font-pixel)', fontSize: '5px', color: 'var(--gba-text)' }}>HP</span>
                 <span style={{ fontFamily: 'var(--font-pixel)', fontSize: '7px', color: '#fff', fontWeight: 700 }}>
-                  {Math.ceil(playerState.hp)}
+                  {Math.ceil(displayPlayerHp)}
                 </span>
               </div>
               <div className="gba-bar-bg" style={{ height: '8px' }}>
                 <div className={`gba-bar-fill ${gbaHpColor(playerHpPct)}`} style={{ width: `${playerHpPct}%`, height: '100%' }} />
               </div>
               <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '5px', color: 'var(--gba-dim)', textAlign: 'right', marginTop: '1px' }}>
-                {Math.ceil(playerState.hp)}/{playerState.maxHp}
+                {Math.ceil(displayPlayerHp)}/{playerState.maxHp}
               </div>
             </div>
 
