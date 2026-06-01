@@ -12,12 +12,13 @@ const FRAME_W = 16;
 const FRAME_H = 20;
 
 // Maps pose to the row index in the 48×80 spritesheet (3 cols × 4 rows of 16×20)
-// idle & victory share row 0; attack, defend, hurt each have their own row.
+// Row layout: 0=front, 1=left, 2=right, 3=back
+// Player (left side) faces right via row 2; enemy (right side) is CSS-flipped to face left
 const POSE_ROW_MAP: Record<string, number> = {
   idle: 0,
   victory: 0,
-  attack: 1,
-  defend: 2,
+  attack: 2,
+  defend: 0,
   hurt: 3,
 };
 

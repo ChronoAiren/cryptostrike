@@ -1003,8 +1003,9 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const hasPlayerAttack = pd > 0 && (effect === 'atk' || effect === 'deb');
     const hasEnemyAttack = ed > 0;
     const isCritHit = crit && hasPlayerAttack;
+    const hasSelfEffect = !hasPlayerAttack && (effect === 'def' || effect === 'buf' || effect === 'hold');
 
-    if (!hasPlayerAttack && !hasEnemyAttack) return;
+    if (!hasPlayerAttack && !hasEnemyAttack && !hasSelfEffect) return;
 
     const runTurn = (
       owner: 'player' | 'enemy',
@@ -1035,28 +1036,42 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }, 200);
     };
 
-    // Player's turn first (if they attack)
+    // Player's turn first (attack or self-effect)
     const doPlayerTurn = () => {
-      if (!hasPlayerAttack) return doEnemyTurn();
-
-      runTurn('player',
-        () => setIsPlayerAttacking(true),
-        () => {
-          setIsEnemyHit(true);
-          if (isCritHit) {
-            setShowCritFlash(true);
-            setTimeout(() => setShowCritFlash(false), 120);
-          }
-          setShowDamageNumber(true);
-          if (effect === 'atk' || effect === 'deb') playSound('hit');
-        },
-        () => {
-          setIsPlayerAttacking(false);
-          setIsEnemyHit(false);
-          setShowDamageNumber(false);
-          doEnemyTurn();
-        },
-      );
+      if (hasPlayerAttack) {
+        runTurn('player',
+          () => setIsPlayerAttacking(true),
+          () => {
+            setIsEnemyHit(true);
+            if (isCritHit) {
+              setShowCritFlash(true);
+              setTimeout(() => setShowCritFlash(false), 120);
+            }
+            setShowDamageNumber(true);
+            if (effect === 'atk' || effect === 'deb') playSound('hit');
+          },
+          () => {
+            setIsPlayerAttacking(false);
+            setIsEnemyHit(false);
+            setShowDamageNumber(false);
+            doEnemyTurn();
+          },
+        );
+      } else if (hasSelfEffect) {
+        runTurn('player',
+          () => {},
+          () => {
+            setShowDamageNumber(true);
+            if (effect === 'hold') playSound('heal');
+          },
+          () => {
+            setShowDamageNumber(false);
+            doEnemyTurn();
+          },
+        );
+      } else {
+        doEnemyTurn();
+      }
     };
 
     // Enemy's turn second

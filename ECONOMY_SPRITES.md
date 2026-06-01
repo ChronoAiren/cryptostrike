@@ -156,6 +156,23 @@ Plus `character_plain.png` — the base dress-up character (no items drawn on it
 - Composites wearable layers: loads each equipped item's sprite sheet via `getWearableSheetPath()` and draws on separate layers.
 - Exposed props: `characterKey`, `equippedItems`, `pose`, `frame`, `playing`, `isEnemy`, `size`, etc.
 
+### Pose → Row Mapping (`POSE_ROW_MAP`)
+
+Spritesheet rows: 0=front, 1=left, 2=right, 3=back.
+
+```ts
+const POSE_ROW_MAP = {
+  idle: 0,    // face front
+  victory: 0, // face front
+  attack: 2,  // face right — player faces enemy naturally; enemy is CSS-flipped → face left
+  defend: 0,  // face front
+  hurt: 3,    // face back (turned away from hit)
+};
+```
+
+- **Player** (left side): no flip → uses row 2 (right-facing) → faces right at enemy ✓
+- **Enemy** (right side): `isEnemy=true → flipX=true` → row 2 is CSS-flipped → faces left at player ✓
+
 ### Dress-Up Character (`MyCharacterScreen.tsx`)
 
 - Uses `character_plain.png` as base, renders via canvas with a simple **3-frame walk cycle** at 6 fps.
@@ -236,7 +253,37 @@ All are 48×80 (3×4 frames of 16×20), matching the base `character_plain.png` 
 
 ---
 
-## 7. File Reference
+## 7. VFX Spritesheet
+
+### File: `public/vfx_sprites/universal_v1.png`
+
+- Dimensions: **160×80** = 10 columns × 5 rows of **16×16 frames**.
+- Rendered via canvas (`VfxSprite.tsx`) with `requestAnimationFrame` loop.
+
+| Row | Action  | Use |
+|-----|---------|-----|
+| 0   | attack  | Player attack / enemy attack VFX |
+| 1   | defense | Player defense (shield) VFX |
+| 2   | buff    | Player self-buff VFX |
+| 3   | debuff  | Player debuff on enemy VFX |
+| 4   | heal    | HOLD action heal VFX |
+
+### VFX Trigger Conditions (BattleScreen)
+
+| VFX | Trigger | Position |
+|-----|---------|----------|
+| attack/debuff | `turnOwner === 'player' && playerDamage > 0 && (effect === 'atk' \|\| effect === 'deb')` | Enemy side (near top) |
+| attack (enemy) | `turnOwner === 'enemy' && enemyDamage > 0` | Player side (near bottom) |
+| defense/buff | `turnOwner === 'player' && (effect === 'def' \|\| effect === 'buf')` | Player side (near bottom) |
+| heal | `turnOwner === 'player' && effect === 'hold'` | Player side (near bottom) |
+
+### Self-Effect Animation Flow
+
+When the player uses a non-damage action (defend/buff/hold), `triggerFighterAnimations` now runs a shortened animation sequence so VFX and pose changes still play. Previously it returned early when `hasPlayerAttack` was false. The animation goes through the same phase cycle (anticipate → launch → impact → resolution) but without `isPlayerAttacking` set, so the sprite stays in a neutral/defensive pose.
+
+---
+
+## 8. File Reference
 
 | File | Purpose |
 |------|---------|
