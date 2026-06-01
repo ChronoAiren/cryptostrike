@@ -463,6 +463,18 @@ export const BattleScreen: React.FC = () => {
                 />
               </div>
             )}
+            {/* Heal (HOLD) → player side (near bottom) — only during player's turn */}
+            {turnOwner === 'player' && damageReport.playerEffectType === 'hold' && (
+              <div style={{ position: 'absolute', left: '18%', bottom: rowLayout ? '40px' : 'auto', top: rowLayout ? 'auto' : '40%', transform: 'translate(-50%, 0)' }}>
+                <VfxSprite
+                  action="heal"
+                  playing
+                  size={64}
+                  fps={12}
+                  frameCount={10}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

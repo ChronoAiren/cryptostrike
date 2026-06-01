@@ -18,7 +18,7 @@ export const VfxTestScreen: React.FC = () => {
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {(['attack', 'defense', 'buff', 'debuff'] as const).map((action) => (
+        {(['attack', 'defense', 'buff', 'debuff', 'heal'] as const).map((action) => (
           <div
             key={action}
             style={{
@@ -37,21 +37,23 @@ export const VfxTestScreen: React.FC = () => {
                 fontSize: 11,
                 fontWeight: 700,
                 textTransform: 'uppercase',
-                color:
-                  action === 'attack'
-                    ? '#EF4444'
-                    : action === 'defense'
-                      ? '#38BDF8'
-                      : action === 'buff'
-                        ? '#22C55E'
-                        : '#A855F7',
+                  color:
+                    action === 'attack'
+                      ? '#EF4444'
+                      : action === 'defense'
+                        ? '#38BDF8'
+                        : action === 'buff'
+                          ? '#22C55E'
+                          : action === 'debuff'
+                            ? '#A855F7'
+                            : '#34D399',
               }}
             >
               {action}
             </span>
 
             <span style={{ fontSize: 10, color: '#666', width: 80 }}>
-              row {['attack', 'defense', 'buff', 'debuff'].indexOf(action)} · 10 frames
+              row {['attack', 'defense', 'buff', 'debuff', 'heal'].indexOf(action)} · 10 frames
             </span>
 
             <VfxSprite

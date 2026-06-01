@@ -9,10 +9,11 @@ const ACTION_ROWS: Record<string, number> = {
   defense: 1,
   buff: 2,
   debuff: 3,
+  heal: 4,
 };
 
 export interface VfxSpriteProps {
-  action: 'attack' | 'defense' | 'buff' | 'debuff';
+  action: 'attack' | 'defense' | 'buff' | 'debuff' | 'heal';
   playing?: boolean;
   loop?: boolean;
   size?: number;
