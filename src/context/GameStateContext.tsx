@@ -10,6 +10,7 @@ import {
   type BuffDebuff,
 } from '../types/game';
 import { useAudio } from './AudioContext';
+import { useBattleSounds } from '../features/battle/useBattleSounds';
 import { FREE_ITEM_IDS, getItemCategory, WEARABLES } from '../data/wearables';
 
 interface UserProfile {
@@ -200,6 +201,7 @@ const AIS = [
 
 export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { playSound } = useAudio();
+  const battleSfx = useBattleSounds();
 
   // User profile (persisted)
   const [user, setUser] = useState<UserProfile>(() => {
@@ -1031,16 +1033,19 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             setTimeout(() => {
               callback();
             }, 250);
-          }, 350);
-        }, 200);
-      }, 200);
+          }, 400);
+        }, 350);
+      }, 250);
     };
 
     // Player's turn first (attack or self-effect)
     const doPlayerTurn = () => {
       if (hasPlayerAttack) {
         runTurn('player',
-          () => setIsPlayerAttacking(true),
+          () => {
+            setIsPlayerAttacking(true);
+            battleSfx.play('attack', 'start');
+          },
           () => {
             setIsEnemyHit(true);
             if (isCritHit) {
@@ -1048,7 +1053,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               setTimeout(() => setShowCritFlash(false), 120);
             }
             setShowDamageNumber(true);
-            if (effect === 'atk' || effect === 'deb') playSound('hit');
+            battleSfx.play('attack', 'end');
           },
           () => {
             setIsPlayerAttacking(false);
@@ -1059,10 +1064,15 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         );
       } else if (hasSelfEffect) {
         runTurn('player',
-          () => {},
+          () => {
+            if (effect === 'hold') battleSfx.play('attack', 'start');
+          },
           () => {
             setShowDamageNumber(true);
-            if (effect === 'hold') playSound('heal');
+            if (effect === 'hold') {
+              battleSfx.play('attack', 'end');
+              playSound('heal');
+            }
           },
           () => {
             setShowDamageNumber(false);
@@ -1082,11 +1092,14 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       runTurn('enemy',
-        () => setIsEnemyAttacking(true),
+        () => {
+          setIsEnemyAttacking(true);
+          battleSfx.play('attack', 'start');
+        },
         () => {
           setIsPlayerHit(true);
           setShowDamageNumber(true);
-          playSound('hit');
+          battleSfx.play('attack', 'end');
         },
         () => {
           setIsEnemyAttacking(false);
