@@ -385,19 +385,24 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Background music (BGM)
   const bgmRef = useRef<HTMLAudioElement | null>(null);
   const bgmTrackRef = useRef<string>('');
-  const bgmPendingRef = useRef(false);
   const bgmVolumeRef = useRef(user.bgmVolume);
 
   bgmVolumeRef.current = user.bgmVolume;
 
-  // Retry BGM on any click if autoplay was blocked (browser policy)
+  // Eagerly start homepage BGM on the very first user click —
+  // browsers block autoplay, so we piggyback on the first gesture.
   useEffect(() => {
     const handler = () => {
-      if (bgmPendingRef.current && bgmRef.current) {
-        bgmRef.current.play().then(() => { bgmPendingRef.current = false; }).catch(() => {});
+      if (!bgmRef.current) {
+        const a = new Audio('/battle_sound/background/homepage.mp3');
+        a.loop = true;
+        a.volume = bgmVolumeRef.current;
+        a.play().then(() => { bgmTrackRef.current = 'homepage'; }).catch(() => {});
+        bgmRef.current = a;
+        bgmTrackRef.current = 'homepage';
       }
     };
-    document.addEventListener('click', handler);
+    document.addEventListener('click', handler, { once: true, capture: true });
     return () => document.removeEventListener('click', handler);
   }, []);
 
@@ -421,8 +426,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const a = new Audio(`/battle_sound/background/${track}.mp3`);
       a.loop = true;
       a.volume = bgmVolumeRef.current;
-      const p = a.play();
-      if (p) { p.catch(() => { bgmPendingRef.current = true; }); p.then(() => { bgmPendingRef.current = false; }).catch(() => {}); }
+      a.play().catch(() => {});
       bgmRef.current = a;
       bgmTrackRef.current = track;
     };
@@ -433,8 +437,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       a.loop = false;
       a.volume = bgmVolumeRef.current;
       if (onEnd) a.addEventListener('ended', onEnd);
-      const p = a.play();
-      if (p) { p.catch(() => { bgmPendingRef.current = true; }); p.then(() => { bgmPendingRef.current = false; }).catch(() => {}); }
+      a.play().catch(() => {});
       bgmRef.current = a;
       bgmTrackRef.current = track;
     };
@@ -444,8 +447,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const a = new Audio(`/battle_sound/background/${loop}.mp3`);
         a.loop = true;
         a.volume = bgmVolumeRef.current;
-        const p = a.play();
-        if (p) { p.catch(() => {}); p.then(() => {}).catch(() => {}); }
+        a.play().catch(() => {});
         bgmRef.current = a;
         bgmTrackRef.current = loop;
       });
@@ -459,7 +461,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (winRecord === true) onceThenLoop('winner_start', 'winner_end');
       else if (winRecord === false) onceThenLoop('defeat_start', 'defeat_end');
       else stop();
-    } else if (['home', 'welcome', 'profile', 'myCharacter', 'items', 'classSelect', 'itemEquip', 'coinChoose', 'settings'].includes(currentScreen)) {
+    } else if (['splash', 'home', 'welcome', 'profile', 'myCharacter', 'items', 'classSelect', 'itemEquip', 'coinChoose', 'settings'].includes(currentScreen)) {
       playLoop('homepage');
     } else {
       stop();
