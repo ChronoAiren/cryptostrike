@@ -41,3 +41,19 @@ export const WEARABLES: WearableItem[] = [
 export function getItemCategory(id: string): WearableCategory | null {
   return WEARABLES.find(w => w.id === id)?.category ?? null;
 }
+
+// Maps cosmetic item id → overlay sprite sheet path for compositing on character_plain.png
+export const OVERLAY_SPRITES: Record<string, string> = {
+  head1: '/sprite_head/head_1.png',
+  body1: '/sprite_body/body_1.png',
+  boots1: '/sprite_shoes/shoes_1.png',
+  head2: '/sprite_head/head_2.png',
+  body2: '/sprite_body/body_2.png',
+  boots2: '/sprite_shoes/shoes_2.png',
+  head3: '/sprite_head/head_3.png',
+  body3: '/sprite_body/body_3.png',
+  boots3: '/sprite_shoes/shoes_3.png',
+  head4: '/sprite_head/head_4.png',
+  body4: '/sprite_body/body_4.png',
+  boots4: '/sprite_shoes/shoes_4.png',
+};

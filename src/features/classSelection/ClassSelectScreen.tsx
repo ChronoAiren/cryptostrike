@@ -2,7 +2,28 @@ import React from 'react';
 import { useGame, CLASSES } from '../../context/GameStateContext';
 import { FighterSprite } from '../sprites/FighterSprite';
 import { type ClassKey } from '../../types/game';
+import { OVERLAY_SPRITES, WEARABLES } from '../../data/wearables';
 
+function parseStatBonus(bonus: string): { atk: number; def: number; spd: number } {
+  const atk = bonus.includes('%') && bonus.includes('ATK') ? parseInt(bonus) || 0 : 0;
+  const def = bonus.includes('%') && bonus.includes('DEF') ? parseInt(bonus) || 0 : 0;
+  const spd = bonus.includes('SPD') ? parseInt(bonus) || 0 : 0;
+  return { atk, def, spd };
+}
+
+function sumStats(items: string[]): { atk: number; def: number; spd: number } {
+  const total = { atk: 0, def: 0, spd: 0 };
+  items.forEach(id => {
+    const w = WEARABLES.find(x => x.id === id);
+    if (w) {
+      const s = parseStatBonus(w.statBonus);
+      total.atk += s.atk;
+      total.def += s.def;
+      total.spd += s.spd;
+    }
+  });
+  return total;
+}
 const STAT_MAX = { atk: 1.4, def: 0.20, spd: 65, lk: 30 };
 
 const StatBar: React.FC<{ label: string; value: number; max: number; color: string }> = ({
@@ -20,7 +41,12 @@ const StatBar: React.FC<{ label: string; value: number; max: number; color: stri
 };
 
 export const ClassSelectScreen: React.FC = () => {
-  const { selectedClass, selectClass, goItemsScreen, goHome } = useGame();
+  const { selectedClass, selectClass, goItemsScreen, goHome, user } = useGame();
+  const gearStats = sumStats(user.cosmeticItems);
+  const myCharAtk = user.baseAtk + gearStats.atk / 100;
+  const myCharDef = user.baseDef + gearStats.def / 100;
+  const myCharSpd = user.baseSpd + gearStats.spd;
+  const myCharLk = user.baseLk;
 
   return (
     <div style={{ height: '100%', background: 'linear-gradient(180deg, #0a0a1a 0%, #100a20 40%, #0d1a2d 100%)', display: 'flex', flexDirection: 'column', padding: '20px 16px 16px', position: 'relative', overflow: 'hidden' }}>
@@ -39,15 +65,18 @@ export const ClassSelectScreen: React.FC = () => {
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', paddingBottom: '8px' }}>
-          {(Object.entries(CLASSES) as [ClassKey, (typeof CLASSES)[ClassKey]][]).map(([key, c]) => {
+          {(Object.entries(CLASSES) as [ClassKey, (typeof CLASSES)[ClassKey]][])
+            .sort(([a], [b]) => a === 'my_character' ? -1 : b === 'my_character' ? 1 : 0)
+            .map(([key, c]) => {
             const isSelected = selectedClass === key;
+            const isMyChar = key === 'my_character';
             return (
               <div
                 key={key}
                 onClick={() => selectClass(key)}
                 style={{
                   background: isSelected ? 'rgba(243,195,125,0.06)' : 'rgba(255,255,255,0.02)',
-                  border: isSelected ? `1.5px solid ${c.color}` : '1.5px solid rgba(255,255,255,0.06)',
+                  border: isSelected ? `1.5px solid ${isMyChar ? '#FFFFFF' : c.color}` : '1.5px solid rgba(255,255,255,0.06)',
                   borderRadius: '14px',
                   padding: '10px 8px',
                   cursor: 'pointer',
@@ -55,31 +84,31 @@ export const ClassSelectScreen: React.FC = () => {
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  boxShadow: isSelected ? `0 0 20px ${c.color}33` : 'none',
+                  boxShadow: isSelected ? `0 0 20px ${isMyChar ? 'rgba(255,255,255,0.15)' : c.color + '33'}` : 'none',
                 }}
               >
-                <span style={{ fontSize: '10px', fontWeight: 700, color: c.color, letterSpacing: '0.04em', textAlign: 'center', marginBottom: '2px', textShadow: `0 0 8px ${c.color}66` }}>
-                  {c.emoji} {c.name}
+                <span style={{ fontSize: '10px', fontWeight: 700, color: isMyChar ? '#FFFFFF' : c.color, letterSpacing: '0.04em', textAlign: 'center', marginBottom: '2px', textShadow: isMyChar ? '0 0 8px rgba(255,255,255,0.4)' : `0 0 8px ${c.color}66` }}>
+                  {isMyChar ? `🧑 ${user.username}` : `${c.emoji} ${c.name}`}
                 </span>
 
                 <div style={{ margin: '2px 0' }}>
-                  <FighterSprite characterKey={key} equippedItems={[]} pose="idle" playing loop size={72} />
+                  <FighterSprite characterKey={key} overlaySources={isMyChar ? user.cosmeticItems.filter(id => OVERLAY_SPRITES[id]).map(id => OVERLAY_SPRITES[id]) : []} pose="idle" playing loop size={72} />
                 </div>
 
                 <div style={{ width: '100%', marginTop: '2px' }}>
-                  <StatBar label="ATK" value={c.atk} max={STAT_MAX.atk} color="var(--color-coral)" />
-                  <StatBar label="DEF" value={c.def} max={STAT_MAX.def} color="var(--color-periwinkle)" />
-                  <StatBar label="SPD" value={c.spd} max={STAT_MAX.spd} color="var(--color-mint)" />
-                  <StatBar label="LCK" value={c.lk} max={STAT_MAX.lk} color="var(--color-gold)" />
+                  <StatBar label="ATK" value={isMyChar ? myCharAtk : c.atk} max={STAT_MAX.atk} color="var(--color-coral)" />
+                  <StatBar label="DEF" value={isMyChar ? myCharDef : c.def} max={STAT_MAX.def} color="var(--color-periwinkle)" />
+                  <StatBar label="SPD" value={isMyChar ? myCharSpd : c.spd} max={STAT_MAX.spd} color="var(--color-mint)" />
+                  <StatBar label="LCK" value={isMyChar ? myCharLk : c.lk} max={STAT_MAX.lk} color="var(--color-gold)" />
                 </div>
 
                 <div style={{ marginTop: '5px', display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'center' }}>
                   <span style={{ fontSize: '8px', color: 'var(--text-muted)' }}>HP</span>
-                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#6EE7A0', background: 'rgba(110,231,160,0.12)', borderRadius: '4px', padding: '1px 5px' }}>{c.hp}</span>
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#6EE7A0', background: 'rgba(110,231,160,0.12)', borderRadius: '4px', padding: '1px 5px' }}>{isMyChar ? user.baseHp : c.hp}</span>
                 </div>
 
                 <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '7px', padding: '5px 6px', marginTop: '6px', fontSize: '8px', lineHeight: '1.35', color: 'var(--text-secondary)', width: '100%', textAlign: 'left' }}>
-                  <b style={{ color: 'var(--color-gold)', fontSize: '8px' }}>Passive: </b>{c.passiveDesc}
+                  <b style={{ color: 'var(--color-gold)', fontSize: '8px' }}>Passive: </b>{isMyChar ? 'Uses your account base stats + cosmetic gear bonuses in battle.' : c.passiveDesc}
                 </div>
               </div>
             );

@@ -1,12 +1,18 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useGame, ITEMS } from '../../context/GameStateContext';
 import { FighterSprite } from '../sprites/FighterSprite';
 import { ItemIcon } from '../sprites/ItemIcon';
+import { OVERLAY_SPRITES } from '../../data/wearables';
 
 export const ItemEquipScreen: React.FC = () => {
-  const { selectedClass, equippedItems, toggleEquipItem, goCoinsScreen, goToClassSelect } = useGame();
+  const { selectedClass, equippedItems, toggleEquipItem, goCoinsScreen, goToClassSelect, user } = useGame();
 
   const isEquipped = (id: string) => equippedItems.includes(id);
+  const overlaySources = useMemo(
+    () => user.cosmeticItems.filter(id => OVERLAY_SPRITES[id]).map(id => OVERLAY_SPRITES[id]),
+    [user.cosmeticItems]
+  );
+  const spriteKey = selectedClass || 'char_one';
 
   return (
     <div style={{ height: '100%', background: 'linear-gradient(180deg, #0a0a1a 0%, #100a20 40%, #0d1a2d 100%)', display: 'flex', flexDirection: 'column', padding: '20px 16px 16px', position: 'relative', overflow: 'hidden' }}>
@@ -28,11 +34,25 @@ export const ItemEquipScreen: React.FC = () => {
           <span style={{ position: 'absolute', top: '8px', right: '12px', fontSize: '8px', fontFamily: 'var(--font-pixel)', letterSpacing: '0.5px', background: 'rgba(0,0,0,0.4)', padding: '3px 8px', borderRadius: '6px', color: 'var(--color-gold)' }}>
             PREVIEW
           </span>
-          {selectedClass && (
-            <div style={{ transform: 'scale(1.15)', margin: '4px 0' }}>
-              <FighterSprite characterKey={selectedClass} equippedItems={equippedItems} pose="idle" playing loop size={110} />
-            </div>
-          )}
+          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            {selectedClass && (
+              <div style={{ transform: 'scale(1.15)', margin: '6px 0' }}>
+                <FighterSprite characterKey={spriteKey} overlaySources={overlaySources} pose="idle" playing loop size={110} />
+              </div>
+            )}
+            {equippedItems.length > 0 && (
+              <div style={{ position: 'absolute', left: '-44px', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {equippedItems.map(id => {
+                  const item = ITEMS.find(it => it.id === id);
+                  return (
+                    <div key={id} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '30px', height: '30px' }}>
+                      {item ? <ItemIcon itemId={id} size={22} /> : <span style={{ fontSize: '14px' }}>?</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '4px', textAlign: 'center' }}>
             {equippedItems.length === 0
               ? 'Tap items below to equip'

@@ -27,6 +27,11 @@ interface UserProfile {
   gems: number;
   bgmVolume: number;
   vfxVolume: number;
+  baseHp: number;
+  baseAtk: number;
+  baseDef: number;
+  baseSpd: number;
+  baseLk: number;
 }
 
 interface GameStateContextProps {
@@ -172,6 +177,18 @@ export const CLASSES: Record<ClassKey, ClassDefinition> = {
     passiveDesc: 'Send It: EXTREME coins deal ×2.5 damage. Below 20% HP triggers one auto-correct trade (once per battle).',
     passiveKey: 'sendit',
   },
+  my_character: {
+    name: 'My Character',
+    emoji: '🧑',
+    color: '#FFFFFF',
+    hp: 80,
+    atk: 1.0,
+    def: 0.08,
+    spd: 45,
+    lk: 10,
+    passiveDesc: 'Specialist: Uses your account\'s base stats and cosmetic gear bonuses.',
+    passiveKey: 'specialist',
+  },
 };
 
 export const ITEMS: Item[] = [
@@ -229,10 +246,15 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           gems: parsed.gems ?? 10,
           bgmVolume: parsed.bgmVolume ?? 0.3,
           vfxVolume: parsed.vfxVolume ?? 0.5,
+          baseHp: parsed.baseHp ?? 80,
+          baseAtk: parsed.baseAtk ?? 1.0,
+          baseDef: parsed.baseDef ?? 0.08,
+          baseSpd: parsed.baseSpd ?? 45,
+          baseLk: parsed.baseLk ?? 10,
         };
       }
     } catch {}
-    return { username: '', avatar: '⚔️', bio: '', createdAt: '', gamesPlayed: 0, wins: 0, totalDamage: 0, cosmeticItems: [], purchasedItems: [...FREE_ITEM_IDS], gold: 500, gems: 10, bgmVolume: 0.3, vfxVolume: 0.5 };
+    return { username: '', avatar: '⚔️', bio: '', createdAt: '', gamesPlayed: 0, wins: 0, totalDamage: 0, cosmeticItems: [], purchasedItems: [...FREE_ITEM_IDS], gold: 500, gems: 10, bgmVolume: 0.3, vfxVolume: 0.5, baseHp: 80, baseAtk: 1.0, baseDef: 0.08, baseSpd: 45, baseLk: 10 };
   });
 
   useEffect(() => {
@@ -390,38 +412,37 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const bgmTrackRef = useRef<string>('');
   const prevBgmTrackRef = useRef<string>('');
   const bgmVolumeRef = useRef(user.bgmVolume);
+  const bgmFirstClickRef = useRef(false);
 
   bgmVolumeRef.current = user.bgmVolume;
 
-  // Retry BGM on first click (browsers block autoplay on page load).
-  // We handle two cases:
-  // 1. useEffect hasn't created the Audio yet → eagerly create it now
-  //    so play() is inside the user gesture and succeeds.
-  // 2. Audio was created but play() was rejected → retry.
+  // Handle first-click autoplay: browsers block Audio.play() outside a user gesture.
+  // After first interaction, BGM is managed entirely by the second useEffect.
   useEffect(() => {
+    if (bgmFirstClickRef.current) return;
     const handler = () => {
-      if (!bgmRef.current) {
-        // Eagerly create within the gesture — play() will succeed
-        const track = currentScreen === 'splash' ? 'on_booting' : 'homepage';
-        const a = new Audio(`/battle_sound/background/${track}.mp3`);
-        a.loop = track !== 'on_booting';
-        a.volume = bgmVolumeRef.current;
-        if (track === 'on_booting') {
-          a.addEventListener('ended', () => {
-            const next = new Audio('/battle_sound/background/homepage.mp3');
-            next.loop = true;
-            next.volume = bgmVolumeRef.current;
-            next.play().catch(() => {});
-            bgmRef.current = next;
-            bgmTrackRef.current = 'homepage';
-          });
-        }
-        a.play().catch(() => {});
-        bgmRef.current = a;
-        bgmTrackRef.current = track;
-      } else if (bgmRef.current.paused) {
-        bgmRef.current.play().catch(() => {});
+      bgmFirstClickRef.current = true;
+      if (bgmRef.current) {
+        if (bgmRef.current.paused) bgmRef.current.play().catch(() => {});
+        return;
       }
+      const track = currentScreen === 'splash' ? 'on_booting' : 'homepage';
+      const a = new Audio(`/battle_sound/background/${track}.mp3`);
+      a.loop = track !== 'on_booting';
+      a.volume = bgmVolumeRef.current;
+      if (track === 'on_booting') {
+        a.addEventListener('ended', () => {
+          const next = new Audio('/battle_sound/background/homepage.mp3');
+          next.loop = true;
+          next.volume = bgmVolumeRef.current;
+          next.play().catch(() => {});
+          bgmRef.current = next;
+          bgmTrackRef.current = 'homepage';
+        });
+      }
+      a.play().catch(() => {});
+      bgmRef.current = a;
+      bgmTrackRef.current = track;
     };
     document.addEventListener('click', handler, { once: true, capture: true });
     return () => document.removeEventListener('click', handler);
@@ -560,6 +581,19 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setLoading(true, 'Preparing battle...');
     playSound('confirm');
 
+    // Sum stat bonuses from equipped cosmetic wearables
+    let cosmeticAtk = 0;
+    let cosmeticDef = 0;
+    let cosmeticSpd = 0;
+    user.cosmeticItems.forEach(id => {
+      const w = WEARABLES.find(x => x.id === id);
+      if (!w) return;
+      const s = w.statBonus;
+      if (s.includes('ATK')) cosmeticAtk += (parseInt(s) || 0) / 100;
+      if (s.includes('DEF')) cosmeticDef += (parseInt(s) || 0) / 100;
+      if (s.includes('SPD')) cosmeticSpd += parseInt(s) || 0;
+    });
+
     let atkBonus = 0;
     let defBonus = 0;
     let spdBonus = 0;
@@ -574,17 +608,20 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
 
     const clDef = CLASSES[selectedClass];
-    const aiDef = AIS[Math.floor(Math.random() * AIS.length)];
+    const playerName = selectedClass === 'my_character' ? user.username : clDef.name;
+    const playerSpriteKey = selectedClass;
+    const eligibleAI = AIS.filter(ai => ai.spriteKey !== playerSpriteKey);
+    const aiDef = eligibleAI.length > 0 ? eligibleAI[Math.floor(Math.random() * eligibleAI.length)] : AIS[0];
 
     setPlayerState({
-      name: clDef.name,
-      spriteKey: selectedClass,
-      hp: clDef.hp,
-      maxHp: clDef.hp,
-      atk: clDef.atk + atkBonus,
-      def: Math.min(clDef.def + defBonus, 0.65),
-      spd: clDef.spd + spdBonus,
-      lk: clDef.lk,
+      name: playerName,
+      spriteKey: playerSpriteKey,
+      hp: user.baseHp,
+      maxHp: user.baseHp,
+      atk: user.baseAtk + cosmeticAtk + atkBonus,
+      def: Math.min(user.baseDef + cosmeticDef + defBonus, 0.65),
+      spd: user.baseSpd + cosmeticSpd + spdBonus,
+      lk: user.baseLk,
       buffs: [],
       debuffs: [],
     });

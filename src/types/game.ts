@@ -5,7 +5,8 @@ export type ClassKey =
   | 'char_three'
   | 'char_four'
   | 'char_five'
-  | 'char_six';
+  | 'char_six'
+  | 'my_character';
 
 /** Sprite sheet animation poses (GDD §18.2) */
 export type SpriteState = 'idle' | 'attack' | 'defend' | 'hurt' | 'victory';

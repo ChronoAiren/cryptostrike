@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useGame } from '../../context/GameStateContext';
+import { FighterSprite } from '../sprites/FighterSprite';
+import { OVERLAY_SPRITES } from '../../data/wearables';
 
 export const VSScreen: React.FC = () => {
   const { selectedClass, selectedCoin, playerState, enemyState, startBattle, user } = useGame();
@@ -23,23 +25,37 @@ export const VSScreen: React.FC = () => {
       <div style={{ position: 'absolute', width: '300px', height: '300px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(243, 195, 125, 0.06) 0%, transparent 70%)', top: '-10%', left: '-15%', animation: 'pulse 4s ease-in-out infinite' }} />
       <div style={{ position: 'absolute', width: '250px', height: '250px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(147, 229, 177, 0.05) 0%, transparent 70%)', bottom: '-10%', right: '-15%', animation: 'pulse 5s ease-in-out infinite 1s' }} />
 
-      <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '24px', width: '100%', maxWidth: '400px', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', flex: 1 }}>
-          <div style={{ fontSize: '64px', lineHeight: 1, animation: 'popIn 0.4s cubic-bezier(.34,1.56,.64,1)' }}>{user.avatar}</div>
-          <div style={{ fontFamily: 'var(--font-accent)', fontSize: '15px', fontWeight: 700, color: 'var(--color-gold)', marginTop: '8px' }}>{user.username.toUpperCase()}</div>
-          <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-main)' }}>{playerState?.name || 'Fighter'}</div>
-        </div>
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '24px', width: '100%', maxWidth: '400px', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <FighterSprite
+              characterKey={playerState?.spriteKey || 'char_one'}
+              pose="idle"
+              playing
+              loop
+              overlaySources={user.cosmeticItems.filter(id => OVERLAY_SPRITES[id]).map(id => OVERLAY_SPRITES[id])}
+              size={80}
+            />
+            <div style={{ fontFamily: 'var(--font-accent)', fontSize: '15px', fontWeight: 700, color: 'var(--color-gold)', marginTop: '4px' }}>{user.username.toUpperCase()}</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-main)' }}>{playerState?.name || 'Fighter'}</div>
+          </div>
 
-        <div style={{ fontFamily: 'var(--font-pixel)', fontSize: 'clamp(16px, 4vw, 26px)', color: 'var(--color-gold)', textShadow: '0 0 30px rgba(243,195,125,.5)', animation: 'popIn .5s cubic-bezier(.34,1.56,.64,1) .1s both' }}>
-          VS
-        </div>
+          <div style={{ fontFamily: 'var(--font-pixel)', fontSize: 'clamp(16px, 4vw, 26px)', color: 'var(--color-gold)', textShadow: '0 0 30px rgba(243,195,125,.5)', animation: 'popIn .5s cubic-bezier(.34,1.56,.64,1) .1s both' }}>
+            VS
+          </div>
 
-        <div style={{ textAlign: 'center', flex: 1 }}>
-          <div style={{ fontSize: '64px', lineHeight: 1, animation: 'popIn 0.45s cubic-bezier(.34,1.56,.64,1) .08s both' }}>👾</div>
-          <div style={{ fontFamily: 'var(--font-accent)', fontSize: '15px', fontWeight: 700, color: 'var(--color-coral)', marginTop: '8px' }}>{enemyState?.name || 'AI'}</div>
-          <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-main)' }}>AI Opponent</div>
+          <div style={{ textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <FighterSprite
+              characterKey={enemyState?.spriteKey || 'char_two'}
+              pose="idle"
+              playing
+              loop
+              isEnemy
+              size={80}
+            />
+            <div style={{ fontFamily: 'var(--font-accent)', fontSize: '15px', fontWeight: 700, color: 'var(--color-coral)', marginTop: '4px' }}>{enemyState?.name || 'AI'}</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-main)' }}>AI Opponent</div>
+          </div>
         </div>
-      </div>
 
       <div style={{ background: 'rgba(255,255,255,0.02)', border: '1.5px solid rgba(243, 195, 125, 0.2)', borderRadius: '12px', padding: '10px 20px', textAlign: 'center', animation: 'fadeIn 0.6s ease 0.2s both', position: 'relative', zIndex: 1 }}>
         <div style={{ fontFamily: 'var(--font-accent)', fontSize: '15px', fontWeight: 700, color: 'var(--color-gold)' }}>{selectedCoin.symbol}/USDT</div>

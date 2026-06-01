@@ -68,6 +68,7 @@
     "char_three": "character_three.png",
     "char_four":  "character_four.png",
     "char_five":  "character_five.png",
-    "char_six":   "character_six.png"
+    "char_six":   "character_six.png",
+    "my_character": "character_plain.png"
   }
 }

@@ -6,6 +6,7 @@ import { derivePlayerPose, deriveEnemyPose } from '../sprites/deriveFighterPose'
 import { ItemIcon } from '../sprites/ItemIcon';
 import { MarketChart, formatPrice } from '../market/MarketChart';
 import { ExitConfirmDialog } from '../../components/feedback/ExitConfirmDialog';
+import { OVERLAY_SPRITES } from '../../data/wearables';
 
 function useMediaQuery(query: string): boolean {
   const [match, setMatch] = useState(() => window.matchMedia(query).matches);
@@ -296,6 +297,7 @@ export const BattleScreen: React.FC = () => {
           <FighterSprite
             characterKey={playerState.spriteKey}
             equippedItems={equippedItems}
+            overlaySources={user.cosmeticItems.filter(id => OVERLAY_SPRITES[id]).map(id => OVERLAY_SPRITES[id])}
             pose={playerPose}
             playing={playerPose === 'idle' || battlePhase === 'res'}
             loop={playerPose !== 'attack'}

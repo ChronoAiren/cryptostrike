@@ -25,6 +25,7 @@ const POSE_ROW_MAP: Record<string, number> = {
 export interface FighterSpriteProps {
   characterKey: string;
   equippedItems?: string[];
+  overlaySources?: string[];
   pose?: SpriteState;
   frame?: number;
   playing?: boolean;
@@ -43,37 +44,51 @@ export interface FighterSpriteProps {
 const ReferenceSprite: React.FC<{
   src: string;
   pose: SpriteState;
-  externalFrame?: number; // when set, skip internal animation
+  externalFrame?: number;
   playing: boolean;
   loop: boolean;
   displaySize: number;
   flipX: boolean;
-}> = ({ src, pose, externalFrame, playing, loop, displaySize, flipX }) => {
+  overlaySources?: string[];
+}> = ({ src, pose, externalFrame, playing, loop, displaySize, flipX, overlaySources = [] }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
+  const overlayImgRefs = useRef<Map<string, HTMLImageElement>>(new Map());
   const [imageError, setImageError] = useState(false);
 
-  // Load image once per src change
+  // Load base sprite
   useEffect(() => {
     setImageError(false);
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       imgRef.current = img;
-      console.log('Sprite loaded:', src, img.width, 'x', img.height);
     };
     img.onerror = () => {
       setImageError(true);
-      console.error('Failed to load sprite:', src);
     };
     img.src = src;
-
     return () => {
-      // Prevent stale onload from setting ref for old src
       img.onload = null;
       img.onerror = null;
     };
   }, [src]);
+
+  // Load overlay sprites
+  useEffect(() => {
+    const map = new Map<string, HTMLImageElement>();
+    overlaySources.forEach(ovSrc => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        map.set(ovSrc, img);
+        overlayImgRefs.current = new Map(map);
+      };
+      img.onerror = () => {};
+      img.src = ovSrc;
+    });
+    return () => { overlayImgRefs.current = new Map(); };
+  }, [overlaySources]);
 
   // Single rAF loop — draws directly to canvas, zero React state updates
   useEffect(() => {
@@ -104,6 +119,10 @@ const ReferenceSprite: React.FC<{
       const srcY = poseRow * FRAME_H;
       ctx.clearRect(0, 0, FRAME_W, FRAME_H);
       ctx.drawImage(img, srcX, srcY, FRAME_W, FRAME_H, 0, 0, FRAME_W, FRAME_H);
+      overlayImgRefs.current.forEach(ov => {
+        const ovCols = Math.max(1, Math.floor(ov.width / FRAME_W));
+        ctx.drawImage(ov, Math.min(frameIndex, ovCols - 1) * FRAME_W, srcY, FRAME_W, FRAME_H, 0, 0, FRAME_W, FRAME_H);
+      });
     };
 
     const tick = (now: number) => {
@@ -144,7 +163,7 @@ const ReferenceSprite: React.FC<{
 
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [src, pose, playing, loop, externalFrame]);
+  }, [src, pose, playing, loop, externalFrame, overlaySources]);
 
   if (imageError) {
     return (
@@ -195,6 +214,7 @@ const ReferenceSprite: React.FC<{
 export const FighterSprite: React.FC<FighterSpriteProps> = ({
   characterKey,
   equippedItems = [],
+  overlaySources = [],
   pose = 'idle',
   frame: externalFrame,
   playing = true,
@@ -264,6 +284,7 @@ export const FighterSprite: React.FC<FighterSpriteProps> = ({
             loop={loop}
             displaySize={size}
             flipX={shouldFlip}
+            overlaySources={overlaySources}
           />
         ) : (
           <div

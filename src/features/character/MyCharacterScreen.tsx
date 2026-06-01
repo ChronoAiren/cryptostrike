@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useGame } from '../../context/GameStateContext';
-import { WEARABLES, WEARABLE_CATEGORIES } from '../../data/wearables';
+import { WEARABLES, WEARABLE_CATEGORIES, OVERLAY_SPRITES } from '../../data/wearables';
 import type { WearableCategory } from '../../data/wearables';
 
 const FRAME_W = 16;
@@ -9,20 +9,6 @@ const COLS = 3;
 
 type Direction = 'front' | 'left' | 'right' | 'back';
 const DIRECTION_ROW: Record<Direction, number> = { front: 0, left: 1, right: 2, back: 3 };
-const OVERLAY_SPRITES: Record<string, string> = {
-  head1: '/sprite_head/head_1.png',
-  body1: '/sprite_body/body_1.png',
-  boots1: '/sprite_shoes/shoes_1.png',
-  head2: '/sprite_head/head_2.png',
-  body2: '/sprite_body/body_2.png',
-  boots2: '/sprite_shoes/shoes_2.png',
-  head3: '/sprite_head/head_3.png',
-  body3: '/sprite_body/body_3.png',
-  boots3: '/sprite_shoes/shoes_3.png',
-  head4: '/sprite_head/head_4.png',
-  body4: '/sprite_body/body_4.png',
-  boots4: '/sprite_shoes/shoes_4.png',
-};
 
 const spriteSrc: Record<string, string> = { ...OVERLAY_SPRITES };
 
@@ -74,7 +60,7 @@ function sumStats(items: string[]): { atk: number; def: number; spd: number } {
   return total;
 }
 
-const PlainSprite: React.FC<{ size: number; direction: Direction; overlaySources: string[] }> = ({ size, direction, overlaySources }) => {
+const PlainSprite: React.FC<{ size: number; direction: Direction; overlaySources: string[]; characterKey?: string }> = ({ size, direction, overlaySources, characterKey }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const baseRef = useRef<HTMLImageElement | null>(null);
   const [error, setError] = useState(false);
@@ -84,11 +70,12 @@ const PlainSprite: React.FC<{ size: number; direction: Direction; overlaySources
     setError(false);
     const img = new Image();
     img.crossOrigin = 'anonymous';
+    const src = characterKey ? `/sprites/character_${characterKey}.png` : '/sprites/character_plain.png';
     img.onload = () => { baseRef.current = img; };
     img.onerror = () => setError(true);
-    img.src = '/sprites/character_plain.png';
+    img.src = src;
     return () => { img.onload = null; img.onerror = null; };
-  }, []);
+  }, [characterKey]);
 
   useEffect(() => {
     const map = new Map<string, HTMLImageElement>();
@@ -173,7 +160,16 @@ export const MyCharacterScreen: React.FC = () => {
   const [spriteSize, setSpriteSize] = useState(SIZE_MAX);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const stats = sumStats(equipped);
+  const gearStats = sumStats(equipped);
+  const baseAtk = user.baseAtk;
+  const baseDef = Math.round(user.baseDef * 100);
+  const baseSpd = user.baseSpd;
+  const gearAtk = gearStats.atk;
+  const gearDef = gearStats.def;
+  const gearSpd = gearStats.spd;
+  const totalAtk = baseAtk + gearAtk / 100;
+  const totalDef = baseDef + gearDef;
+  const totalSpd = baseSpd + gearSpd;
 
   const tabItems = WEARABLES.filter(w => w.category === activeTab && owned.includes(w.id));
 
@@ -245,16 +241,21 @@ export const MyCharacterScreen: React.FC = () => {
           </div>
 
           {/* Stats preview */}
-          <div style={{ flexShrink: 0, display: 'flex', gap: '8px', justifyContent: 'center' }}>
+          <div style={{ flexShrink: 0, display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
             {[
-              { label: 'ATK', value: stats.atk, color: 'var(--color-coral)' },
-              { label: 'DEF', value: stats.def, color: 'var(--color-periwinkle)' },
-              { label: 'SPD', value: stats.spd, color: 'var(--color-mint)' },
+              { label: 'HP', base: user.baseHp, bonus: 0, total: user.baseHp, color: '#6EE7A0', fmt: (v: number) => `${v}` },
+              { label: 'ATK', base: baseAtk, bonus: gearAtk, total: totalAtk, color: 'var(--color-coral)', fmt: (v: number) => v.toFixed(2) },
+              { label: 'DEF', base: baseDef, bonus: gearDef, total: totalDef, color: 'var(--color-periwinkle)', fmt: (v: number) => `${v}%` },
+              { label: 'SPD', base: baseSpd, bonus: gearSpd, total: totalSpd, color: 'var(--color-mint)', fmt: (v: number) => `${v}` },
+              { label: 'LCK', base: user.baseLk, bonus: 0, total: user.baseLk, color: 'var(--color-gold)', fmt: (v: number) => `${v}` },
             ].map(s => (
-              <div key={s.label} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div key={s.label} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '6px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px', minWidth: '48px' }}>
                 <span style={{ fontSize: '9px', fontFamily: 'var(--font-pixel)', color: s.color, letterSpacing: '0.5px' }}>{s.label}</span>
-                <span style={{ fontSize: '14px', fontFamily: 'var(--font-accent)', fontWeight: 700, color: s.value > 0 ? s.color : 'var(--text-muted)' }}>
-                  +{s.value}
+                <span style={{ fontSize: '13px', fontFamily: 'var(--font-accent)', fontWeight: 700, color: s.color }}>
+                  {s.fmt(s.total)}
+                </span>
+                <span style={{ fontSize: '7px', color: 'var(--text-muted)', fontFamily: 'var(--font-main)' }}>
+                  {s.fmt(s.base)}{s.bonus > 0 ? ` +${s.label === 'ATK' ? (s.bonus / 100).toFixed(2) : s.bonus}` : ''}
                 </span>
               </div>
             ))}
