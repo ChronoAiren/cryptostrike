@@ -425,58 +425,50 @@ export const BattleScreen: React.FC = () => {
         <div ref={dmgcRef} className="dmg-cont" />
 
         {/* ═══ VFX Overlays ═══ */}
-        {(animationPhase === 'impact') && damageReport && (
-          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 25 }}>
-            {/* Player attack/debuff → enemy side (near top) — only during player's turn */}
-            {turnOwner === 'player' && damageReport.playerDamage > 0 && (damageReport.playerEffectType === 'atk' || damageReport.playerEffectType === 'deb') && (
-              <div style={{ position: 'absolute', right: '24%', top: rowLayout ? '20px' : '30%', transform: 'translate(50%, 0)' }}>
+        {animationPhase === 'impact' && damageReport && (() => {
+          const dr = damageReport;
+          const isPlayerTurn = turnOwner === 'player';
+          const isEnemyTurn = turnOwner === 'enemy';
+          const peff = dr.playerEffectType;
+
+          // Determine VFX action and position
+          let vfxAction: 'attack' | 'defense' | 'buff' | 'debuff' | 'heal' | null = null;
+          let vfxPos: Record<string, string> = {};
+
+          if (isPlayerTurn && dr.playerDamage > 0 && (peff === 'atk' || peff === 'deb')) {
+            // Player attack/debuff → enemy side (top)
+            vfxAction = peff === 'atk' ? 'attack' : 'debuff';
+            vfxPos = { right: '24%', top: rowLayout ? '20px' : '30%' };
+          } else if (isEnemyTurn && dr.enemyDamage > 0) {
+            // Enemy attack → player side (bottom)
+            vfxAction = 'attack';
+            vfxPos = { left: '24%', bottom: rowLayout ? '20px' : 'auto', top: rowLayout ? 'auto' : '50%' };
+          } else if (isPlayerTurn && (peff === 'def' || peff === 'buf')) {
+            // Self-defense/buff → player side (bottom)
+            vfxAction = peff === 'def' ? 'defense' : 'buff';
+            vfxPos = { left: '18%', bottom: rowLayout ? '20px' : 'auto', top: rowLayout ? 'auto' : '40%' };
+          } else if (isPlayerTurn && peff === 'hold') {
+            // Heal → player side (bottom)
+            vfxAction = 'heal';
+            vfxPos = { left: '18%', bottom: rowLayout ? '40px' : 'auto', top: rowLayout ? 'auto' : '40%' };
+          }
+
+          if (!vfxAction) return null;
+
+          return (
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 25 }}>
+              <div style={{ position: 'absolute', ...vfxPos, transform: 'translate(-50%, 0)' }}>
                 <VfxSprite
-                  action={damageReport.playerEffectType === 'deb' ? 'debuff' : 'attack'}
+                  action={vfxAction}
                   playing
                   size={64}
                   fps={12}
                   frameCount={10}
                 />
               </div>
-            )}
-            {/* Enemy attack → player side (near bottom) — only during enemy's turn */}
-            {turnOwner === 'enemy' && damageReport.enemyDamage > 0 && (
-              <div style={{ position: 'absolute', left: '24%', bottom: rowLayout ? '20px' : 'auto', top: rowLayout ? 'auto' : '50%', transform: 'translate(-50%, 0)' }}>
-                <VfxSprite
-                  action="attack"
-                  playing
-                  size={64}
-                  fps={12}
-                  frameCount={10}
-                />
-              </div>
-            )}
-            {/* Self-effects (defense/buff) → player side (near bottom) — only during player's turn */}
-            {turnOwner === 'player' && (damageReport.playerEffectType === 'def' || damageReport.playerEffectType === 'buf') && (
-              <div style={{ position: 'absolute', left: '18%', bottom: rowLayout ? '20px' : 'auto', top: rowLayout ? 'auto' : '40%', transform: 'translate(-50%, 0)' }}>
-                <VfxSprite
-                  action={damageReport.playerEffectType === 'def' ? 'defense' : 'buff'}
-                  playing
-                  size={64}
-                  fps={12}
-                  frameCount={10}
-                />
-              </div>
-            )}
-            {/* Heal (HOLD) → player side (near bottom) — only during player's turn */}
-            {turnOwner === 'player' && damageReport.playerEffectType === 'hold' && (
-              <div style={{ position: 'absolute', left: '18%', bottom: rowLayout ? '40px' : 'auto', top: rowLayout ? 'auto' : '40%', transform: 'translate(-50%, 0)' }}>
-                <VfxSprite
-                  action="heal"
-                  playing
-                  size={64}
-                  fps={12}
-                  frameCount={10}
-                />
-              </div>
-            )}
-          </div>
-        )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* ═══ CHART + ACTIONS ═══ */}

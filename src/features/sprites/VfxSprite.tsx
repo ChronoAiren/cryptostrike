@@ -75,6 +75,12 @@ export const VfxSprite: React.FC<VfxSpriteProps> = ({
       if (!img) return;
 
       ctx.clearRect(0, 0, FRAME_W, FRAME_H);
+      if (!img) {
+        // DEBUG: show colored box when image not loaded
+        ctx.fillStyle = '#0f08';
+        ctx.fillRect(0, 0, FRAME_W, FRAME_H);
+        return;
+      }
 
       const srcX = frameIndex * FRAME_W;
       const srcY = row * FRAME_H;
