@@ -13,11 +13,18 @@ interface DerivePoseInput {
 }
 
 export function derivePlayerPose(input: DerivePoseInput): SpriteState {
-  const { animationPhase, isAttacking, isHit, turnOwner } = input;
+  const { animationPhase, isAttacking, isHit, turnOwner, playerEffectType } = input;
 
   if (turnOwner === 'player') {
-    if (animationPhase === 'anticipate' || animationPhase === 'launch') return 'attack';
-    if (animationPhase === 'impact') return 'attack';
+    if (animationPhase === 'anticipate' || animationPhase === 'launch') {
+      if (playerEffectType === 'atk' || playerEffectType === 'deb') return 'attack';
+      return 'idle';
+    }
+    if (animationPhase === 'impact') {
+      if (playerEffectType === 'atk' || playerEffectType === 'deb') return 'attack';
+      if (playerEffectType === 'def') return 'defend';
+      return 'idle';
+    }
     if (animationPhase === 'resolution') return 'idle';
   }
   if (turnOwner === 'enemy' && animationPhase === 'impact' && isHit) return 'hurt';

@@ -271,6 +271,7 @@ export const BattleScreen: React.FC = () => {
           transition: 'transform 0.15s ease-out',
           transform:
             turnOwner === 'player' && (animationPhase === 'launch' || animationPhase === 'impact')
+              && damageReport?.playerEffectType === 'atk'
               ? 'translateX(36px)'
               : turnOwner === 'enemy' && animationPhase === 'impact'
                 ? 'translateX(-12px)'
@@ -382,6 +383,7 @@ export const BattleScreen: React.FC = () => {
             turnOwner === 'enemy' && (animationPhase === 'launch' || animationPhase === 'impact')
               ? 'translateX(-36px)'
               : turnOwner === 'player' && animationPhase === 'impact'
+                && damageReport?.playerEffectType === 'atk'
                 ? 'translateX(12px)'
                 : 'translateX(0)',
         }}>
@@ -436,21 +438,29 @@ export const BattleScreen: React.FC = () => {
           let vfxPos: Record<string, string> = {};
 
           if (isPlayerTurn && dr.playerDamage > 0 && (peff === 'atk' || peff === 'deb')) {
-            // Player attack/debuff → enemy side (top)
+            // Player attack/debuff → ON enemy sprite (top-right)
             vfxAction = peff === 'atk' ? 'attack' : 'debuff';
-            vfxPos = { right: '24%', top: rowLayout ? '20px' : '30%' };
+            vfxPos = rowLayout
+              ? { right: '10%', top: '25px' }
+              : { right: '8%', top: '22%' };
           } else if (isEnemyTurn && dr.enemyDamage > 0) {
-            // Enemy attack → player side (bottom)
+            // Enemy attack → ON player sprite (bottom-left)
             vfxAction = 'attack';
-            vfxPos = { left: '24%', bottom: rowLayout ? '20px' : 'auto', top: rowLayout ? 'auto' : '50%' };
+            vfxPos = rowLayout
+              ? { left: '8%', bottom: '25px' }
+              : { left: '6%', bottom: '28%' };
           } else if (isPlayerTurn && (peff === 'def' || peff === 'buf')) {
-            // Self-defense/buff → player side (bottom)
+            // Self buff/defense → RIGHT of player sprite
             vfxAction = peff === 'def' ? 'defense' : 'buff';
-            vfxPos = { left: '18%', bottom: rowLayout ? '20px' : 'auto', top: rowLayout ? 'auto' : '40%' };
+            vfxPos = rowLayout
+              ? { left: '30%', bottom: '30px' }
+              : { left: '32%', top: '40%' };
           } else if (isPlayerTurn && peff === 'hold') {
-            // Heal → player side (bottom)
+            // Heal → RIGHT of player sprite, slightly higher
             vfxAction = 'heal';
-            vfxPos = { left: '18%', bottom: rowLayout ? '40px' : 'auto', top: rowLayout ? 'auto' : '40%' };
+            vfxPos = rowLayout
+              ? { left: '30%', bottom: '50px' }
+              : { left: '32%', top: '32%' };
           }
 
           if (!vfxAction) return null;
