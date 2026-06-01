@@ -68,6 +68,12 @@ body {
   padding: 0;
 }
 
+img, canvas {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
 #root {
   width: 100%;
   height: 100vh;

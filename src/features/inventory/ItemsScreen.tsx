@@ -23,7 +23,7 @@ const SpriteThumb: React.FC<{ src: string; size: number }> = ({ src, size }) => 
   return <canvas ref={canvasRef} width={size} height={size} style={{ display: 'block', imageRendering: 'pixelated', borderRadius: '8px' }} />;
 };
 
-const spriteItems = ['head1', 'body1', 'boots1', 'head2', 'body2', 'boots2'];
+const spriteItems = ['head1', 'body1', 'boots1', 'head2', 'body2', 'boots2', 'head3', 'body3', 'boots3', 'head4', 'body4', 'boots4'];
 const spriteSrc: Record<string, string> = {
   head1: '/sprite_head/head_1.png',
   body1: '/sprite_body/body_1.png',
@@ -31,6 +31,12 @@ const spriteSrc: Record<string, string> = {
   head2: '/sprite_head/head_2.png',
   body2: '/sprite_body/body_2.png',
   boots2: '/sprite_shoes/shoes_2.png',
+  head3: '/sprite_head/head_3.png',
+  body3: '/sprite_body/body_3.png',
+  boots3: '/sprite_shoes/shoes_3.png',
+  head4: '/sprite_head/head_4.png',
+  body4: '/sprite_body/body_4.png',
+  boots4: '/sprite_shoes/shoes_4.png',
 };
 
 export const ItemsScreen: React.FC = () => {
@@ -101,7 +107,8 @@ export const ItemsScreen: React.FC = () => {
                 key={w.id}
                 onClick={() => {
                   if (isOwned) toggleCosmeticItem(w.id);
-                  else if (!isFree) setBuyTarget(w);
+                  else if (isFree) { purchaseItem(w.id, 'gold'); toggleCosmeticItem(w.id); }
+                  else setBuyTarget(w);
                 }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '12px',

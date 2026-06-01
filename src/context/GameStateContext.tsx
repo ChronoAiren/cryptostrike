@@ -270,16 +270,19 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const item = WEARABLES.find(w => w.id === id);
     if (!item) return;
     const cost = currency === 'gold' ? item.price : item.gemCost;
-    if (cost <= 0) return;
     setUser(prev => {
-      const hasFunds = currency === 'gold' ? prev.gold >= cost : prev.gems >= cost;
-      if (!hasFunds || prev.purchasedItems.includes(id)) return prev;
-      return {
-        ...prev,
-        gold: currency === 'gold' ? prev.gold - cost : prev.gold,
-        gems: currency === 'gems' ? prev.gems - cost : prev.gems,
-        purchasedItems: [...prev.purchasedItems, id],
-      };
+      if (prev.purchasedItems.includes(id)) return prev;
+      if (cost > 0) {
+        const hasFunds = currency === 'gold' ? prev.gold >= cost : prev.gems >= cost;
+        if (!hasFunds) return prev;
+        return {
+          ...prev,
+          gold: currency === 'gold' ? prev.gold - cost : prev.gold,
+          gems: currency === 'gems' ? prev.gems - cost : prev.gems,
+          purchasedItems: [...prev.purchasedItems, id],
+        };
+      }
+      return { ...prev, purchasedItems: [...prev.purchasedItems, id] };
     });
   };
 
@@ -385,6 +388,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Background music (BGM)
   const bgmRef = useRef<HTMLAudioElement | null>(null);
   const bgmTrackRef = useRef<string>('');
+  const prevBgmTrackRef = useRef<string>('');
   const bgmVolumeRef = useRef(user.bgmVolume);
 
   bgmVolumeRef.current = user.bgmVolume;
@@ -424,6 +428,8 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [currentScreen]);
 
   useEffect(() => {
+    const prevTrack = prevBgmTrackRef.current;
+
     const stop = () => {
       if (bgmRef.current) {
         bgmRef.current.pause();
@@ -434,8 +440,8 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
 
     const playLoop = (track: string) => {
-      // Same track already playing — just update volume, don't restart
-      if (bgmTrackRef.current === track && bgmRef.current && !bgmRef.current.paused) {
+      // Dedup against track playing BEFORE cleanup ran
+      if (track === prevTrack && bgmRef.current && !bgmRef.current.paused) {
         bgmRef.current.volume = bgmVolumeRef.current;
         return;
       }
@@ -486,7 +492,10 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       stop();
     }
 
-    return stop;
+    return () => {
+      prevBgmTrackRef.current = bgmTrackRef.current;
+      stop();
+    };
   }, [currentScreen, winRecord]);
 
   // Keep BGM volume in sync when user.bgmVolume changes
