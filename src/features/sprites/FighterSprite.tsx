@@ -11,6 +11,16 @@ import {
 const FRAME_W = 16;
 const FRAME_H = 20;
 
+// Maps pose to the row index in the 48×80 spritesheet (3 cols × 4 rows of 16×20)
+// idle & victory share row 0; attack, defend, hurt each have their own row.
+const POSE_ROW_MAP: Record<string, number> = {
+  idle: 0,
+  victory: 0,
+  attack: 1,
+  defend: 2,
+  hurt: 3,
+};
+
 export interface FighterSpriteProps {
   characterKey: string;
   equippedItems?: string[];
@@ -23,6 +33,7 @@ export interface FighterSpriteProps {
   status?: 'buffed' | 'debuffed' | 'none';
   size?: number;
   className?: string;
+  impact?: boolean;
 }
 
 // ─── Internal canvas-driven sprite ───────────────────────────────────────────
@@ -85,11 +96,12 @@ const ReferenceSprite: React.FC<{
     const draw = (frameIndex: number) => {
       const img = imgRef.current;
       if (!img) return;
-      // Auto-detect actual columns from image width — handles both
-      // single-frame 16×20 images and multi-frame spritesheets.
       const actualCols = Math.max(1, Math.floor(img.width / FRAME_W));
-      const srcX = Math.min(frameIndex, actualCols - 1) * FRAME_W;
-      const srcY = 0;
+      const poseRow = POSE_ROW_MAP[pose] ?? 0;
+      const col = frameIndex % actualCols;
+      const srcX = col * FRAME_W;
+      const srcY = poseRow * FRAME_H;
+      ctx.clearRect(0, 0, FRAME_W, FRAME_H);
       ctx.drawImage(img, srcX, srcY, FRAME_W, FRAME_H, 0, 0, FRAME_W, FRAME_H);
     };
 
@@ -191,6 +203,7 @@ export const FighterSprite: React.FC<FighterSpriteProps> = ({
   status = 'none',
   size = 120,
   className = '',
+  impact = false,
 }) => {
   const shouldFlip = flipX ?? isEnemy;
   const useReferenceSprite = SPRITE_MANIFEST.useReferenceSprite === true;
@@ -205,6 +218,7 @@ export const FighterSprite: React.FC<FighterSpriteProps> = ({
         height: size,
         flexShrink: 0,
         overflow: 'hidden',
+        ...(impact ? { animation: 'sprite-impact 0.3s ease-in-out' } : {}),
       }}
     >
       {/* Status glow rings */}

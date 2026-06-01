@@ -56,7 +56,7 @@ const MainApp: React.FC = () => {
   };
 
   return (
-    <PhoneWrapper>
+    <PhoneWrapper wide={currentScreen === 'battle'}>
       {renderActiveScreen()}
       <OnboardingTooltip />
       <LoadingOverlay />

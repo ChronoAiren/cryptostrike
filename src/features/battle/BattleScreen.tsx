@@ -7,6 +7,17 @@ import { ItemIcon } from '../sprites/ItemIcon';
 import { MarketChart, formatPrice } from '../market/MarketChart';
 import { ExitConfirmDialog } from '../../components/feedback/ExitConfirmDialog';
 
+function useMediaQuery(query: string): boolean {
+  const [match, setMatch] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const handler = (e: MediaQueryListEvent) => setMatch(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [query]);
+  return match;
+}
+
 /* ─── Damage number spawner ─── */
 function spawnDmg(container: HTMLElement, text: string, cls: string, x: number, y: number) {
   const el = document.createElement('div');
@@ -60,8 +71,6 @@ export const BattleScreen: React.FC = () => {
     isPlayerHit,
     isEnemyHit,
     animationPhase,
-    screenShake,
-    screenZoom,
     showCritFlash,
     timerVal,
     damageDealtDisplay,
@@ -69,6 +78,7 @@ export const BattleScreen: React.FC = () => {
     setLoading,
   } = useGame();
 
+  const desktop = useMediaQuery('(min-width: 769px)');
   const logEndRef = useRef<HTMLDivElement | null>(null);
   const starsRef = useRef<HTMLCanvasElement>(null);
   const dmgcRef = useRef<HTMLDivElement>(null);
@@ -178,10 +188,7 @@ export const BattleScreen: React.FC = () => {
         flexDirection: 'column',
         height: '100%',
         position: 'relative',
-        transform: `scale(${screenZoom})`,
-        transition: 'transform 0.1s ease',
       }}
-      className={screenShake !== 'none' ? `animate-shake-${screenShake}` : ''}
     >
       {/* Crit Flash Overlay */}
       {showCritFlash && (
@@ -219,17 +226,24 @@ export const BattleScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* ═══ ARENA (sprite stage + GBA panels) ═══ */}
-      <div
-        style={{
-          flex: '0 0 auto',
-          position: 'relative',
-          minHeight: '200px',
-          background: 'linear-gradient(180deg,#040810 0%,#070F1A 35%,#0A1520 65%,#0C1A28 100%)',
-          overflow: 'hidden',
-          borderBottom: '2px solid var(--border-dim)',
-        }}
-      >
+      {/* ═══ BODY: side-by-side on desktop, stacked on mobile ═══ */}
+      <div style={{
+        flex: 1, display: 'flex',
+        flexDirection: desktop ? 'row' : 'column',
+        minHeight: 0, overflow: 'hidden',
+      }}>
+        {/* ═══ ARENA (sprite stage + GBA panels) ═══ */}
+        <div
+          style={{
+            flex: desktop ? '0 0 40%' : '0 0 auto',
+            position: 'relative',
+            minHeight: desktop ? '100%' : '200px',
+            background: 'linear-gradient(180deg,#040810 0%,#070F1A 35%,#0A1520 65%,#0C1A28 100%)',
+            overflow: 'hidden',
+            borderBottom: desktop ? 'none' : '2px solid var(--border-dim)',
+            borderRight: desktop ? '2px solid var(--border-dim)' : 'none',
+          }}
+        >
         {/* Stars */}
         <canvas ref={starsRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
 
@@ -259,6 +273,7 @@ export const BattleScreen: React.FC = () => {
             isEnemy={false}
             status={playerState.buffs.length > 0 ? 'buffed' : playerState.debuffs.length > 0 ? 'debuffed' : 'none'}
             size={80}
+            impact={isPlayerHit}
           />
           {/* Player stats panel — HP dominant, combat stats grouped, utility stats lighter */}
           <div style={{
@@ -383,6 +398,7 @@ export const BattleScreen: React.FC = () => {
             isEnemy={true}
             status={enemyState.buffs.length > 0 ? 'buffed' : enemyState.debuffs.length > 0 ? 'debuffed' : 'none'}
             size={80}
+            impact={isEnemyHit}
           />
         </div>
 
@@ -392,9 +408,9 @@ export const BattleScreen: React.FC = () => {
         {/* ═══ VFX Overlays ═══ */}
         {(animationPhase === 'impact' || animationPhase === 'damage') && damageReport && (
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 25 }}>
-            {/* Player attack/debuff → enemy side (right-center) */}
+            {/* Player attack/debuff → enemy side (near top) */}
             {damageReport.playerDamage > 0 && (damageReport.playerEffectType === 'atk' || damageReport.playerEffectType === 'deb') && (
-              <div style={{ position: 'absolute', right: '24%', top: '50%', transform: 'translate(50%, -50%)' }}>
+              <div style={{ position: 'absolute', right: '24%', top: desktop ? '20px' : '30%', transform: 'translate(50%, 0)' }}>
                 <VfxSprite
                   action={damageReport.playerEffectType === 'deb' ? 'debuff' : 'attack'}
                   playing
@@ -404,9 +420,9 @@ export const BattleScreen: React.FC = () => {
                 />
               </div>
             )}
-            {/* Enemy attack → player side (left-center) */}
+            {/* Enemy attack → player side (near bottom) */}
             {damageReport.enemyDamage > 0 && (
-              <div style={{ position: 'absolute', left: '24%', top: '50%', transform: 'translate(-50%, -50%)' }}>
+              <div style={{ position: 'absolute', left: '24%', bottom: desktop ? '20px' : 'auto', top: desktop ? 'auto' : '50%', transform: 'translate(-50%, 0)' }}>
                 <VfxSprite
                   action="attack"
                   playing
@@ -416,9 +432,9 @@ export const BattleScreen: React.FC = () => {
                 />
               </div>
             )}
-            {/* Self-effects (defense/buff) → player side */}
+            {/* Self-effects (defense/buff) → player side (near bottom) */}
             {(damageReport.playerEffectType === 'def' || damageReport.playerEffectType === 'buf') && (
-              <div style={{ position: 'absolute', left: '18%', top: '40%', transform: 'translate(-50%, -50%)' }}>
+              <div style={{ position: 'absolute', left: '18%', bottom: desktop ? '20px' : 'auto', top: desktop ? 'auto' : '40%', transform: 'translate(-50%, 0)' }}>
                 <VfxSprite
                   action={damageReport.playerEffectType === 'def' ? 'defense' : 'buff'}
                   playing
@@ -432,10 +448,13 @@ export const BattleScreen: React.FC = () => {
         )}
       </div>
 
-      {/* ═══ RIGHT SIDE: CHART + ACTIONS ═══ */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto' }}>
+      {/* ═══ CHART + ACTIONS ═══ */}
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto',
+        ...(desktop ? { fontSize: '11px' } : {}),
+      }}>
         {/* Chart */}
-        <div style={{ flexShrink: 0, padding: '8px 12px', borderBottom: '2px solid var(--border-dim)' }}>
+        <div style={{ flexShrink: 0, padding: desktop ? '6px 10px' : '8px 12px', borderBottom: '2px solid var(--border-dim)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
               <span style={{ fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.8px' }}>{selectedCoin.symbol}/USDT</span>
@@ -491,10 +510,14 @@ export const BattleScreen: React.FC = () => {
         </div>
 
         {/* Actions */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '8px 12px', gap: '6px', minHeight: 0 }}>
+        <div style={{
+          flex: 1, display: 'flex', flexDirection: 'column',
+          padding: desktop ? '4px 10px' : '8px 12px',
+          gap: desktop ? '4px' : '6px', minHeight: 0,
+        }}>
           {/* Timer */}
           <div style={{ flexShrink: 0 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '3px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px', color: 'var(--text-muted)', marginBottom: '2px' }}>
               <span>{battlePhase === 'rpg' ? 'Choose action' : 'Resolving market...'}</span>
               <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{timerVal > 0 ? `${timerVal}s` : ''}</span>
             </div>
@@ -513,7 +536,7 @@ export const BattleScreen: React.FC = () => {
             <div style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
-              gap: '6px',
+              gap: '4px',
               flexShrink: 0,
             }}>
               {['attack', 'buff', 'defend', 'debuff'].map((a) => {
@@ -525,8 +548,8 @@ export const BattleScreen: React.FC = () => {
                     onClick={() => setPlayerAction(a as 'attack' | 'buff' | 'defend' | 'debuff' | 'hold')}
                     style={{
                       background: 'var(--bg-card)',
-                      borderRadius: '10px',
-                      padding: '8px 6px',
+                      borderRadius: '8px',
+                      padding: desktop ? '5px 4px' : '8px 6px',
                       cursor: 'pointer',
                       textAlign: 'center',
                       transition: 'all 0.13s',
@@ -534,11 +557,11 @@ export const BattleScreen: React.FC = () => {
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '2px',
+                      gap: '1px',
                       userSelect: 'none',
                     }}
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isCall ? '#93E5B1' : '#FF9B9B'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isCall ? '#93E5B1' : '#FF9B9B'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       {a === 'attack' ? (
                         <><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14.5c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.83 8 21v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14l-4 4M10 10l4-4"/></>
                       ) : a === 'buff' ? (
@@ -549,10 +572,10 @@ export const BattleScreen: React.FC = () => {
                         <><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></>
                       )}
                     </svg>
-                    <div style={{ fontSize: 'clamp(11px,1.5vw,13px)', fontWeight: 700, color: 'var(--text-primary)' }}>{al.lbl}</div>
-                    <div style={{ fontSize: '8px', color: 'var(--text-muted)' }}>{al.sub}</div>
+                    <div style={{ fontSize: desktop ? '10px' : 'clamp(11px,1.5vw,13px)', fontWeight: 700, color: 'var(--text-primary)' }}>{al.lbl}</div>
+                    <div style={{ fontSize: desktop ? '7px' : '8px', color: 'var(--text-muted)' }}>{al.sub}</div>
                     <div style={{
-                      fontSize: '8px', fontWeight: 600, marginTop: '1px',
+                      fontSize: desktop ? '7px' : '8px', fontWeight: 600, marginTop: '1px',
                       color: isCall ? 'var(--color-mint)' : 'var(--color-coral)',
                     }}>{al.type}</div>
                   </div>
@@ -577,12 +600,12 @@ export const BattleScreen: React.FC = () => {
                   userSelect: 'none',
                 }}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F3C37D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width={desktop ? '14' : '18'} height={desktop ? '14' : '18'} viewBox="0 0 24 24" fill="none" stroke="#F3C37D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
                 </svg>
-                <div style={{ fontSize: 'clamp(11px,1.5vw,13px)', fontWeight: 700, color: 'var(--text-primary)' }}>HOLD</div>
-                <div style={{ fontSize: '8px', color: 'var(--text-muted)' }}>Skip — Hodler heals +8 HP</div>
-                <div style={{ fontSize: '8px', fontWeight: 600, marginTop: '1px', color: 'var(--color-gold)' }}>⏸ HOLD</div>
+                <div style={{ fontSize: desktop ? '10px' : 'clamp(11px,1.5vw,13px)', fontWeight: 700, color: 'var(--text-primary)' }}>HOLD</div>
+                <div style={{ fontSize: desktop ? '7px' : '8px', color: 'var(--text-muted)' }}>Skip — Hodler heals +8 HP</div>
+                <div style={{ fontSize: desktop ? '7px' : '8px', fontWeight: 600, marginTop: '1px', color: 'var(--color-gold)' }}>⏸ HOLD</div>
               </div>
             </div>
           ) : (
@@ -596,7 +619,7 @@ export const BattleScreen: React.FC = () => {
 
           {/* Equipped gear strip */}
           <div style={{ flexShrink: 0 }}>
-            <div style={{ fontFamily: 'var(--font-pixel)', fontSize: '6px', color: 'var(--text-muted)', letterSpacing: '0.5px', marginBottom: '4px' }}>EQUIPPED GEAR</div>
+            <div style={{ fontFamily: 'var(--font-pixel)', fontSize: desktop ? '5px' : '6px', color: 'var(--text-muted)', letterSpacing: '0.5px', marginBottom: '2px' }}>EQUIPPED GEAR</div>
             <div className="wear-strip">
               {['outfit', 'weapon', 'accessory'].map(sl => {
                 const item = passiveGear.find(i => i.slot === sl);
@@ -684,6 +707,7 @@ export const BattleScreen: React.FC = () => {
             <div ref={logEndRef} />
           </div>
         </div>
+      </div>
       </div>
 
       {/* ═══ STATUSBAR ═══ */}
