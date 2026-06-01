@@ -63,7 +63,7 @@ const Card: React.FC<{
           background: item.disabled ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.03)',
           border: item.disabled ? '1.5px solid rgba(255,255,255,0.05)' : '1.5px solid rgba(255,255,255,0.08)',
           borderRadius: '20px',
-          padding: isCampaign ? '24px' : '20px 24px',
+          padding: isCampaign ? '18px' : '14px 20px',
           cursor: item.disabled ? 'not-allowed' : 'pointer',
           display: 'flex',
           flexDirection: isCampaign ? 'column' : 'row',
@@ -73,7 +73,7 @@ const Card: React.FC<{
           transition: 'all 0.2s ease',
           opacity: item.disabled ? 0.4 : 1,
           gridColumn: isCampaign ? '1 / -1' : 'auto',
-          minHeight: isCampaign ? '100px' : 'auto',
+          minHeight: isCampaign ? '80px' : 'auto',
           position: 'relative',
           overflow: 'hidden',
         }}
@@ -187,6 +187,8 @@ const Card: React.FC<{
 export const HomeScreen: React.FC = () => {
   const { user, setScreen } = useGame();
   const desktop = useMediaQuery('(min-width: 769px)');
+  const landscape = useMediaQuery('(orientation: landscape)');
+  const compact = desktop || landscape;
 
   const handleNav = (key: string) => {
     if (key === 'myCharacter') setScreen('myCharacter');
@@ -201,9 +203,9 @@ export const HomeScreen: React.FC = () => {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      padding: desktop ? '28px 32px 24px' : '32px 24px 24px',
+      padding: compact ? '20px 32px 16px' : '32px 24px 24px',
       position: 'relative',
-      overflow: desktop ? 'hidden auto' : 'hidden',
+      overflow: 'hidden',
     }}>
       <div style={{
         position: 'absolute', inset: 0,
@@ -229,13 +231,13 @@ export const HomeScreen: React.FC = () => {
         display: 'flex', flexDirection: 'column',
         alignItems: 'center',
         width: '100%',
-        maxWidth: desktop ? '600px' : '340px',
+        maxWidth: compact ? '600px' : '340px',
         flex: 1,
       }}>
         {/* Title */}
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
-          marginBottom: desktop ? '28px' : '32px', marginTop: desktop ? '4px' : '8px',
+          marginBottom: compact ? '16px' : '32px', marginTop: compact ? '0' : '8px',
         }}>
           <div style={{ fontSize: '32px', marginBottom: '6px', lineHeight: 1 }}>⚔️</div>
           <h1 style={{
@@ -264,15 +266,15 @@ export const HomeScreen: React.FC = () => {
           display: 'flex', justifyContent: 'center', gap: '20px', flexShrink: 0,
           fontSize: '10px', fontFamily: 'var(--font-pixel)', letterSpacing: '0.5px',
           background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)',
-          borderRadius: '12px', padding: '8px 16px', margin: `0 auto ${desktop ? '16px' : '4px'}`,
+          borderRadius: '12px', padding: '8px 16px', margin: `0 auto ${compact ? '12px' : '4px'}`,
           width: 'fit-content', maxWidth: '100%',
         }}>
           <span>💰 <span style={{ color: 'var(--color-gold)', fontWeight: 700, fontFamily: 'var(--font-accent)' }}>{user.gold}</span></span>
           <span>💎 <span style={{ color: 'var(--color-purple)', fontWeight: 700, fontFamily: 'var(--font-accent)' }}>{user.gems}</span></span>
         </div>
 
-        {desktop ? (
-          /* Desktop: bento grid */
+        {compact ? (
+          /* Desktop/landscape: bento grid */
           <div style={{
             flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center',
             width: '100%',
@@ -280,7 +282,7 @@ export const HomeScreen: React.FC = () => {
             <div style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
-              gap: '12px',
+              gap: compact ? '10px' : '12px',
             }}>
               {MENU_ITEMS.map((item, i) => (
                 <Card key={item.key} item={item} i={i} desktop onClick={() => handleNav(item.key)} />
@@ -302,7 +304,7 @@ export const HomeScreen: React.FC = () => {
         {/* Quick stats strip */}
         <div style={{
           width: '100%', display: 'flex', justifyContent: 'center',
-          gap: '20px', padding: '16px 0',
+          gap: '20px', padding: compact ? '10px 0 4px' : '16px 0',
           borderTop: '1px solid rgba(255,255,255,0.04)',
           marginTop: 'auto',
           animation: 'fadeIn 0.6s ease 0.5s both',
