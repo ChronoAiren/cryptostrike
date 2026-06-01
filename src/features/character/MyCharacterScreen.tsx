@@ -237,12 +237,25 @@ export const MyCharacterScreen: React.FC = () => {
         </div>
 
         {/* Bottom buttons */}
-        <div style={{ flexShrink: 0, display: 'flex', gap: '8px', paddingBottom: '4px' }}>
-          <button onClick={() => setScreen('items')} style={{ flex: 1, padding: '12px', background: 'transparent', color: 'var(--text-secondary)', border: '1.5px solid rgba(255,255,255,0.08)', borderRadius: '12px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-accent)', letterSpacing: '1.5px' }}>
-            ← ITEMS
+        <div style={{ flexShrink: 0, display: 'flex', gap: '10px', paddingBottom: '4px', justifyContent: 'center' }}>
+          <button
+            onClick={() => setScreen('items')}
+            style={{
+              width: '48px', height: '48px',
+              background: 'rgba(255,255,255,0.03)',
+              border: '1.5px solid rgba(255,255,255,0.08)',
+              borderRadius: '14px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '20px', transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(243,195,125,0.25)'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+            title="Go to Items"
+          >
+            🎒
           </button>
-          <button onClick={() => setScreen('home')} style={{ flex: 1, padding: '12px', background: 'linear-gradient(135deg, #F3C37D 0%, #D4A04A 100%)', color: '#0a0a1a', border: 'none', borderRadius: '12px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-accent)', letterSpacing: '1.5px' }}>
-            HOME →
+          <button onClick={() => setScreen('home')} style={{ flex: 1, maxWidth: '160px', padding: '12px 0', background: 'linear-gradient(135deg, #F3C37D 0%, #D4A04A 100%)', color: '#0a0a1a', border: 'none', borderRadius: '14px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-accent)', letterSpacing: '1.5px' }}>
+            HOME
           </button>
         </div>
       </div>

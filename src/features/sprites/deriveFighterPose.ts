@@ -1,6 +1,6 @@
 import type { SpriteState } from '../../types/game';
 
-type AnimationPhase = 'idle' | 'anticipate' | 'launch' | 'impact' | 'damage' | 'resolution';
+type AnimationPhase = 'idle' | 'anticipate' | 'launch' | 'impact' | 'resolution';
 
 interface DerivePoseInput {
   animationPhase: AnimationPhase;
@@ -9,30 +9,33 @@ interface DerivePoseInput {
   isEnemy: boolean;
   playerEffectType?: string;
   enemyEffectType?: string;
+  turnOwner: 'player' | 'enemy' | 'none';
 }
 
-/**
- * Maps combat animation phase to sprite sheet pose per GDD battle flow.
- */
 export function derivePlayerPose(input: DerivePoseInput): SpriteState {
-  const { animationPhase, isAttacking, isHit, playerEffectType } = input;
+  const { animationPhase, isAttacking, isHit, turnOwner } = input;
 
-  if (playerEffectType === 'def' && animationPhase !== 'idle') return 'defend';
-  if (isHit && (animationPhase === 'impact' || animationPhase === 'damage')) return 'hurt';
-  if (isAttacking && (animationPhase === 'anticipate' || animationPhase === 'launch' || animationPhase === 'impact')) {
-    return 'attack';
+  if (turnOwner === 'player') {
+    if (animationPhase === 'anticipate' || animationPhase === 'launch') return 'attack';
+    if (animationPhase === 'impact') return 'attack';
+    if (animationPhase === 'resolution') return 'idle';
   }
-  if (animationPhase === 'resolution' && playerEffectType === 'atk') return 'idle';
+  if (turnOwner === 'enemy' && animationPhase === 'impact' && isHit) return 'hurt';
+  if (isHit) return 'hurt';
+  if (isAttacking) return 'attack';
   return 'idle';
 }
 
 export function deriveEnemyPose(input: DerivePoseInput): SpriteState {
-  const { animationPhase, isAttacking, isHit, enemyEffectType } = input;
+  const { animationPhase, isAttacking, isHit, turnOwner } = input;
 
-  if (isHit && (animationPhase === 'impact' || animationPhase === 'damage')) return 'hurt';
-  if (isAttacking && (animationPhase === 'anticipate' || animationPhase === 'launch' || animationPhase === 'impact')) {
-    return 'attack';
+  if (turnOwner === 'enemy') {
+    if (animationPhase === 'anticipate' || animationPhase === 'launch') return 'attack';
+    if (animationPhase === 'impact') return 'attack';
+    if (animationPhase === 'resolution') return 'idle';
   }
-  if (enemyEffectType === 'def') return 'defend';
+  if (turnOwner === 'player' && animationPhase === 'impact' && isHit) return 'hurt';
+  if (isHit) return 'hurt';
+  if (isAttacking) return 'attack';
   return 'idle';
 }

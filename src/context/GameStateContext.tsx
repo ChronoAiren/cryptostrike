@@ -55,9 +55,8 @@ interface GameStateContextProps {
   isEnemyAttacking: boolean;
   isPlayerHit: boolean;
   isEnemyHit: boolean;
-  animationPhase: 'idle' | 'anticipate' | 'launch' | 'impact' | 'damage' | 'resolution';
-  screenShake: 'none' | 'weak' | 'medium' | 'hard';
-  screenZoom: number;
+  animationPhase: 'idle' | 'anticipate' | 'launch' | 'impact' | 'resolution';
+  turnOwner: 'player' | 'enemy' | 'none';
   showCritFlash: boolean;
   showDamageNumber: boolean;
   timerVal: number;
@@ -355,9 +354,8 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [isEnemyAttacking, setIsEnemyAttacking] = useState(false);
   const [isPlayerHit, setIsPlayerHit] = useState(false);
   const [isEnemyHit, setIsEnemyHit] = useState(false);
-  const [animationPhase, setAnimationPhase] = useState<'idle' | 'anticipate' | 'launch' | 'impact' | 'damage' | 'resolution'>('idle');
-  const [screenShake, setScreenShake] = useState<'none' | 'weak' | 'medium' | 'hard'>('none');
-  const [screenZoom, setScreenZoom] = useState(1);
+  const [animationPhase, setAnimationPhase] = useState<'idle' | 'anticipate' | 'launch' | 'impact' | 'resolution'>('idle');
+  const [turnOwner, setTurnOwner] = useState<'player' | 'enemy' | 'none'>('none');
   const [showCritFlash, setShowCritFlash] = useState(false);
   const [showDamageNumber, setShowDamageNumber] = useState(false);
 
@@ -988,84 +986,103 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }, 2600);
   };
 
-  const triggerFighterAnimations = (pd: number, ed: number, effect: string, crit: boolean) => {
-    // Reset animation state
+  const resetAnimationFlags = () => {
     setAnimationPhase('idle');
-    setScreenShake('none');
-    setScreenZoom(1);
+    setTurnOwner('none');
+    setIsPlayerAttacking(false);
+    setIsEnemyAttacking(false);
+    setIsPlayerHit(false);
+    setIsEnemyHit(false);
     setShowCritFlash(false);
     setShowDamageNumber(false);
+  };
 
-    // Determine animation parameters based on damage and crit
+  const triggerFighterAnimations = (pd: number, ed: number, effect: string, crit: boolean) => {
+    resetAnimationFlags();
+
     const hasPlayerAttack = pd > 0 && (effect === 'atk' || effect === 'deb');
     const hasEnemyAttack = ed > 0;
     const isCritHit = crit && hasPlayerAttack;
 
-    // Phase 1: Anticipate (300ms) - Windup before attack
-    setAnimationPhase('anticipate');
-    
-    setTimeout(() => {
-      // Phase 2: Launch (200ms) - Attack animation starts
-      setAnimationPhase('launch');
-      
-      if (hasPlayerAttack) {
-        setIsPlayerAttacking(true);
-      }
-      if (hasEnemyAttack) {
-        setIsEnemyAttacking(true);
-      }
-      
+    if (!hasPlayerAttack && !hasEnemyAttack) return;
+
+    const runTurn = (
+      owner: 'player' | 'enemy',
+      onLaunch: () => void,
+      onImpact: () => void,
+      callback: () => void,
+    ) => {
+      setTurnOwner(owner);
+      setAnimationPhase('anticipate');
+
       setTimeout(() => {
-        // Phase 3: Impact (200ms) - Hit lands with screen effects
-        setAnimationPhase('impact');
-        
-        if (hasPlayerAttack) {
+        setAnimationPhase('launch');
+        onLaunch();
+
+        setTimeout(() => {
+          setAnimationPhase('impact');
+          onImpact();
+
+          setTimeout(() => {
+            setAnimationPhase('resolution');
+            onLaunch(); // reset attack pose
+
+            setTimeout(() => {
+              callback();
+            }, 250);
+          }, 350);
+        }, 200);
+      }, 200);
+    };
+
+    // Player's turn first (if they attack)
+    const doPlayerTurn = () => {
+      if (!hasPlayerAttack) return doEnemyTurn();
+
+      runTurn('player',
+        () => setIsPlayerAttacking(true),
+        () => {
           setIsEnemyHit(true);
-          // Screen shake based on crit
-          setScreenShake(isCritHit ? 'hard' : 'medium');
-          // Zoom effect
-          setScreenZoom(isCritHit ? 1.35 : 1.15);
-          // Crit flash
           if (isCritHit) {
             setShowCritFlash(true);
             setTimeout(() => setShowCritFlash(false), 120);
           }
-          if (effect === 'atk' || effect === 'deb') playSound('hit');
-        }
-        
-        if (hasEnemyAttack) {
-          setIsPlayerHit(true);
-          setScreenShake('weak');
-          playSound('hit');
-        }
-        
-        setTimeout(() => {
-          // Phase 4: Damage Number (600ms) - Show floating damage
-          setAnimationPhase('damage');
           setShowDamageNumber(true);
-          
-          // Reset screen effects after impact
-          setTimeout(() => {
-            setScreenShake('none');
-            setScreenZoom(1);
-          }, 400);
-          
-          setTimeout(() => {
-            // Phase 5: Resolution (300ms) - Return to idle
-            setAnimationPhase('resolution');
-            setIsPlayerAttacking(false);
-            setIsEnemyAttacking(false);
-            setIsPlayerHit(false);
-            setIsEnemyHit(false);
-            setShowDamageNumber(false);
-            
-            setTimeout(() => {
-              setAnimationPhase('idle');
-            }, 300);
-          }, 600);
-        }, 200);
-      }, 200);
-    }, 300);
+          if (effect === 'atk' || effect === 'deb') playSound('hit');
+        },
+        () => {
+          setIsPlayerAttacking(false);
+          setIsEnemyHit(false);
+          setShowDamageNumber(false);
+          doEnemyTurn();
+        },
+      );
+    };
+
+    // Enemy's turn second
+    const doEnemyTurn = () => {
+      if (!hasEnemyAttack) {
+        resetAnimationFlags();
+        return;
+      }
+
+      runTurn('enemy',
+        () => setIsEnemyAttacking(true),
+        () => {
+          setIsPlayerHit(true);
+          setShowDamageNumber(true);
+          playSound('hit');
+        },
+        () => {
+          setIsEnemyAttacking(false);
+          setIsPlayerHit(false);
+          setShowDamageNumber(false);
+          resetAnimationFlags();
+        },
+      );
+    };
+
+    doPlayerTurn();
   };
 
   const tickStatusAuras = () => {
@@ -1192,8 +1209,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         isPlayerHit,
         isEnemyHit,
         animationPhase,
-        screenShake,
-        screenZoom,
+        turnOwner,
         showCritFlash,
         showDamageNumber,
         timerVal,

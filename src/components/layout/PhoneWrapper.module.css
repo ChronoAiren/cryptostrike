@@ -1,6 +1,7 @@
 .container {
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -11,7 +12,9 @@
   width: 100%;
   max-width: 480px;
   height: 100vh;
+  height: 100dvh;
   max-height: 100vh;
+  max-height: 100dvh;
   background-color: var(--bg-deep);
   position: relative;
   display: flex;
@@ -50,9 +53,12 @@
   .inner {
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     max-width: none;
     border-radius: 0;
     border: none;
     box-shadow: none;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 }

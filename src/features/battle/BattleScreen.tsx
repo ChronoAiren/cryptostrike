@@ -71,7 +71,9 @@ export const BattleScreen: React.FC = () => {
     isPlayerHit,
     isEnemyHit,
     animationPhase,
+    turnOwner,
     showCritFlash,
+    showDamageNumber,
     timerVal,
     damageDealtDisplay,
     accuracyDisplay,
@@ -112,21 +114,20 @@ export const BattleScreen: React.FC = () => {
 
   // Damage number effects
   useEffect(() => {
-    if (battlePhase !== 'res' || !damageReport || !dmgcRef.current) return;
+    if (!showDamageNumber || !damageReport || !dmgcRef.current) return;
     const dc = dmgcRef.current;
-    const { playerDamage, enemyDamage, playerEffectType, isCrit } = damageReport;
 
-    if (playerDamage > 0) {
-      spawnDmg(dc, '-' + playerDamage, isCrit ? 'dmg-wht' : 'dmg-gold', 60, 30);
-      if (isCrit) setTimeout(() => spawnDmg(dc, 'CRIT!', 'dmg-wht', 46, 10), 100);
+    if (turnOwner === 'player' && damageReport.playerDamage > 0) {
+      spawnDmg(dc, '-' + damageReport.playerDamage, damageReport.isCrit ? 'dmg-wht' : 'dmg-gold', 60, 30);
+      if (damageReport.isCrit) setTimeout(() => spawnDmg(dc, 'CRIT!', 'dmg-wht', 46, 10), 100);
     }
-    if (enemyDamage > 0) {
-      spawnDmg(dc, '-' + enemyDamage, 'dmg-red', 210, 70);
+    if (turnOwner === 'player' && damageReport.playerEffectType === 'buf') spawnDmg(dc, '▲ATK', 'dmg-gold', 55, 55);
+    if (turnOwner === 'player' && damageReport.playerEffectType === 'def') spawnDmg(dc, 'SHIELD', 'dmg-gold', 46, 55);
+    if (turnOwner === 'enemy' && damageReport.enemyDamage > 0) {
+      spawnDmg(dc, '-' + damageReport.enemyDamage, 'dmg-red', 210, 70);
     }
-    if (playerEffectType === 'buf') spawnDmg(dc, '▲ATK', 'dmg-gold', 55, 55);
-    if (playerEffectType === 'def') spawnDmg(dc, 'SHIELD', 'dmg-gold', 46, 55);
-    if (playerEffectType === 'hold' && playerDamage === 0) spawnDmg(dc, '+HP', 'dmg-grn', 215, 68);
-  }, [battlePhase, damageReport]);
+    if (damageReport.playerEffectType === 'hold' && damageReport.playerDamage === 0) spawnDmg(dc, '+HP', 'dmg-grn', 215, 68);
+  }, [showDamageNumber, turnOwner, damageReport]);
 
   if (!playerState || !enemyState || !selectedCoin) return null;
 
@@ -146,6 +147,7 @@ export const BattleScreen: React.FC = () => {
     isHit: isPlayerHit,
     isEnemy: false,
     playerEffectType: damageReport?.playerEffectType,
+    turnOwner,
   });
 
   const enemyPose = deriveEnemyPose({
@@ -154,6 +156,7 @@ export const BattleScreen: React.FC = () => {
     isHit: isEnemyHit,
     isEnemy: true,
     enemyEffectType: damageReport?.enemyDamage ? 'atk' : undefined,
+    turnOwner,
   });
 
   const getPhaseColorClass = () => {
@@ -263,6 +266,13 @@ export const BattleScreen: React.FC = () => {
         <div style={{
           position: 'absolute', left: '8px', bottom: '8px',
           display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', zIndex: 5,
+          transition: 'transform 0.15s ease-out',
+          transform:
+            turnOwner === 'player' && (animationPhase === 'launch' || animationPhase === 'impact')
+              ? 'translateX(36px)'
+              : turnOwner === 'enemy' && animationPhase === 'impact'
+                ? 'translateX(-12px)'
+                : 'translateX(0)',
         }}>
           <FighterSprite
             characterKey={playerState.spriteKey}
@@ -365,6 +375,13 @@ export const BattleScreen: React.FC = () => {
         <div style={{
           position: 'absolute', right: '8px', top: '8px', zIndex: 5,
           display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px',
+          transition: 'transform 0.15s ease-out',
+          transform:
+            turnOwner === 'enemy' && (animationPhase === 'launch' || animationPhase === 'impact')
+              ? 'translateX(-36px)'
+              : turnOwner === 'player' && animationPhase === 'impact'
+                ? 'translateX(12px)'
+                : 'translateX(0)',
         }}>
           <div className="gba-panel-e" style={{ position: 'static', minWidth: '120px', boxShadow: 'none', margin: 0, padding: '6px 10px 6px' }}>
             <div className="gba-name-row">
@@ -406,10 +423,10 @@ export const BattleScreen: React.FC = () => {
         <div ref={dmgcRef} className="dmg-cont" />
 
         {/* ═══ VFX Overlays ═══ */}
-        {(animationPhase === 'impact' || animationPhase === 'damage') && damageReport && (
+        {(animationPhase === 'impact') && damageReport && (
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 25 }}>
-            {/* Player attack/debuff → enemy side (near top) */}
-            {damageReport.playerDamage > 0 && (damageReport.playerEffectType === 'atk' || damageReport.playerEffectType === 'deb') && (
+            {/* Player attack/debuff → enemy side (near top) — only during player's turn */}
+            {turnOwner === 'player' && damageReport.playerDamage > 0 && (damageReport.playerEffectType === 'atk' || damageReport.playerEffectType === 'deb') && (
               <div style={{ position: 'absolute', right: '24%', top: desktop ? '20px' : '30%', transform: 'translate(50%, 0)' }}>
                 <VfxSprite
                   action={damageReport.playerEffectType === 'deb' ? 'debuff' : 'attack'}
@@ -420,8 +437,8 @@ export const BattleScreen: React.FC = () => {
                 />
               </div>
             )}
-            {/* Enemy attack → player side (near bottom) */}
-            {damageReport.enemyDamage > 0 && (
+            {/* Enemy attack → player side (near bottom) — only during enemy's turn */}
+            {turnOwner === 'enemy' && damageReport.enemyDamage > 0 && (
               <div style={{ position: 'absolute', left: '24%', bottom: desktop ? '20px' : 'auto', top: desktop ? 'auto' : '50%', transform: 'translate(-50%, 0)' }}>
                 <VfxSprite
                   action="attack"
@@ -432,8 +449,8 @@ export const BattleScreen: React.FC = () => {
                 />
               </div>
             )}
-            {/* Self-effects (defense/buff) → player side (near bottom) */}
-            {(damageReport.playerEffectType === 'def' || damageReport.playerEffectType === 'buf') && (
+            {/* Self-effects (defense/buff) → player side (near bottom) — only during player's turn */}
+            {turnOwner === 'player' && (damageReport.playerEffectType === 'def' || damageReport.playerEffectType === 'buf') && (
               <div style={{ position: 'absolute', left: '18%', bottom: desktop ? '20px' : 'auto', top: desktop ? 'auto' : '40%', transform: 'translate(-50%, 0)' }}>
                 <VfxSprite
                   action={damageReport.playerEffectType === 'def' ? 'defense' : 'buff'}
