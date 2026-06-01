@@ -389,16 +389,39 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   bgmVolumeRef.current = user.bgmVolume;
 
-  // Retry BGM on first click (browsers block autoplay on page load)
+  // Retry BGM on first click (browsers block autoplay on page load).
+  // We handle two cases:
+  // 1. useEffect hasn't created the Audio yet → eagerly create it now
+  //    so play() is inside the user gesture and succeeds.
+  // 2. Audio was created but play() was rejected → retry.
   useEffect(() => {
     const handler = () => {
-      if (bgmRef.current && bgmRef.current.paused) {
+      if (!bgmRef.current) {
+        // Eagerly create within the gesture — play() will succeed
+        const track = currentScreen === 'splash' ? 'on_booting' : 'homepage';
+        const a = new Audio(`/battle_sound/background/${track}.mp3`);
+        a.loop = track !== 'on_booting';
+        a.volume = bgmVolumeRef.current;
+        if (track === 'on_booting') {
+          a.addEventListener('ended', () => {
+            const next = new Audio('/battle_sound/background/homepage.mp3');
+            next.loop = true;
+            next.volume = bgmVolumeRef.current;
+            next.play().catch(() => {});
+            bgmRef.current = next;
+            bgmTrackRef.current = 'homepage';
+          });
+        }
+        a.play().catch(() => {});
+        bgmRef.current = a;
+        bgmTrackRef.current = track;
+      } else if (bgmRef.current.paused) {
         bgmRef.current.play().catch(() => {});
       }
     };
     document.addEventListener('click', handler, { once: true, capture: true });
     return () => document.removeEventListener('click', handler);
-  }, []);
+  }, [currentScreen]);
 
   useEffect(() => {
     const stop = () => {
