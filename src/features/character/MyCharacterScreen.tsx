@@ -14,6 +14,9 @@ const OVERLAY_SPRITES: Record<string, string> = {
   head1: '/sprite_head/head_1.png',
   body1: '/sprite_body/body_1.png',
   boots1: '/sprite_shoes/shoes_1.png',
+  head2: '/sprite_head/head_2.png',
+  body2: '/sprite_body/body_2.png',
+  boots2: '/sprite_shoes/shoes_2.png',
 };
 
 const PlainSprite: React.FC<{ size: number; direction: Direction; overlaySources: string[] }> = ({ size, direction, overlaySources }) => {
