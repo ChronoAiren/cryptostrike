@@ -849,7 +849,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const vm = selectedCoin.multiplier * (selectedClass === 'char_six' && isExtreme ? 1.25 : 1);
 
     // Enemy debuffs
-    const eatkm = enemyState.debuffs.filter((d) => d.type === 'atk').reduce((a, d) => a * (d.multiplier ?? 1), 1);
+    let eatkm = enemyState.debuffs.filter((d) => d.type === 'atk').reduce((a, d) => a * (d.multiplier ?? 1), 1);
     const ptrd = enemyState.debuffs.filter((d) => d.type === 'tr').reduce((a, d) => a - (d.subtraction ?? 0), 0);
     const etr2 = Math.max(0.4, etr - ptrd);
 
@@ -862,11 +862,11 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       .reduce((a, d) => a * (d.multiplier ?? 1), 1);
     const effectiveAtk = Number((playerState.atk * playerAtkMult * playerAtkDebuff).toFixed(2));
 
-    const defBonus = playerState.buffs
+    let defBonus = playerState.buffs
       .filter((b) => b.type === 'def' && b.amount)
       .reduce((a, b) => a + (b.amount ?? 0), 0);
     const defCap = selectedClass === 'char_three' ? 0.75 : 0.65;
-    const effectiveDef = Math.min(defCap, playerState.def + defBonus);
+    let effectiveDef = Math.min(defCap, playerState.def + defBonus);
 
     let pdmg = 0;
     let peff = '';
@@ -894,15 +894,19 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
       setBattleLog((prev) => [...prev, `⚔️ ATTACK - Raw: ${raw.toFixed(1)}, DEF: ${enemyState.def}, Final: ${pdmg}`]);
     } else if (action === 'debuff') {
-      const raw = 10 * effectiveAtk * tr;
+      const raw = 10 * effectiveAtk * tr * vm;
       pdmg = Math.max(1, Math.floor(raw * (1 - enemyState.def)));
       setDamageDealtCount((d) => d + pdmg);
+      const debuffMult = pcorr ? 0.7 : 0.85;
       const dur = (isRanger && pcorr) ? 3 : pcorr ? 2 : 1;
-      nextEnemyDebuffs.push({ type: 'atk', multiplier: pcorr ? 0.7 : 0.85, roundsRemaining: dur });
+      nextEnemyDebuffs.push({ type: 'atk', multiplier: debuffMult, roundsRemaining: dur });
+      // Apply immediately for this round's enemy attack
+      eatkm *= debuffMult;
       peff = 'deb';
       setBattleLog((prev) => [...prev, `📉 DEBUFF - Raw: ${raw.toFixed(1)}, DEF: ${enemyState.def}, Final: ${pdmg}`]);
     } else if (action === 'buff') {
-      const dur = (isRanger && pcorr) ? 3 : pcorr ? 2 : 1;
+      // +1 to duration because BUFF has no same-round effect (player already acted)
+      const dur = (isRanger && pcorr) ? 4 : pcorr ? 3 : 2;
       nextPlayerBuffs.push({ type: 'atk', multiplier: pcorr ? 1.3 : 1.1, roundsRemaining: dur });
       peff = 'buf';
       playSound('buff');
@@ -911,10 +915,15 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const dur = (isRanger && pcorr) ? 3 : pcorr ? 2 : 1;
       const da = pcorr ? 0.2 : 0.1;
       nextPlayerBuffs.push({ type: 'def', amount: da, roundsRemaining: dur });
+      // Apply immediately for this round's enemy attack
+      defBonus += da;
+      effectiveDef = Math.min(defCap, playerState.def + defBonus);
       peff = 'def';
       // Shadow Knight: Iron Wall — +5% permanent DEF on correct defend
       if (selectedClass === 'char_three' && pcorr) {
         nextPlayerBuffs.push({ type: 'def', amount: 0.05, roundsRemaining: 999 });
+        defBonus += 0.05;
+        effectiveDef = Math.min(defCap, playerState.def + defBonus);
       }
       playSound('buff');
       setBattleLog((prev) => [...prev, `🛡️ DEFEND - No direct damage`]);
