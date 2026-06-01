@@ -389,17 +389,11 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   bgmVolumeRef.current = user.bgmVolume;
 
-  // Eagerly start homepage BGM on the very first user click —
-  // browsers block autoplay, so we piggyback on the first gesture.
+  // Retry BGM on first click (browsers block autoplay on page load)
   useEffect(() => {
     const handler = () => {
-      if (!bgmRef.current) {
-        const a = new Audio('/battle_sound/background/homepage.mp3');
-        a.loop = true;
-        a.volume = bgmVolumeRef.current;
-        a.play().then(() => { bgmTrackRef.current = 'homepage'; }).catch(() => {});
-        bgmRef.current = a;
-        bgmTrackRef.current = 'homepage';
+      if (bgmRef.current && bgmRef.current.paused) {
+        bgmRef.current.play().catch(() => {});
       }
     };
     document.addEventListener('click', handler, { once: true, capture: true });
@@ -461,7 +455,9 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (winRecord === true) onceThenLoop('winner_start', 'winner_end');
       else if (winRecord === false) onceThenLoop('defeat_start', 'defeat_end');
       else stop();
-    } else if (['splash', 'home', 'welcome', 'profile', 'myCharacter', 'items', 'classSelect', 'itemEquip', 'coinChoose', 'settings'].includes(currentScreen)) {
+    } else if (currentScreen === 'splash') {
+      onceThenLoop('on_booting', 'homepage');
+    } else if (['home', 'welcome', 'profile', 'myCharacter', 'items', 'classSelect', 'itemEquip', 'coinChoose', 'settings'].includes(currentScreen)) {
       playLoop('homepage');
     } else {
       stop();
