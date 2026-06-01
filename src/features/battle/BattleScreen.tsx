@@ -148,6 +148,10 @@ export const BattleScreen: React.FC = () => {
   const defBonus = playerState.buffs.filter(b => b.type === 'def' && b.amount).reduce((a, b) => a + (b.amount ?? 0), 0);
   const effectiveDef = Math.min(0.75, playerState.def + defBonus);
 
+  // Shield from DEFEND action
+  const shield = playerState.buffs.find(b => b.type === 'shield');
+  const shieldHp = shield?.amount ?? 0;
+
   const playerPose = derivePlayerPose({
     animationPhase,
     isAttacking: isPlayerAttacking,
@@ -324,6 +328,18 @@ export const BattleScreen: React.FC = () => {
                 {Math.ceil(displayPlayerHp)}/{playerState.maxHp}
               </div>
             </div>
+
+            {/* Shield bar (DEFEND action) — appears below HP when shield is active */}
+            {shieldHp > 0 && (
+              <div style={{ marginBottom: '5px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                  <span style={{ fontFamily: 'var(--font-pixel)', fontSize: '5px', color: '#60A5FA' }}>SHIELD</span>
+                  <span style={{ fontFamily: 'var(--font-pixel)', fontSize: '6px', color: '#93C5FD' }}>
+                    {Math.ceil(shieldHp)}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Combat stats — ATK + DEF paired, same visual weight */}
             <div style={{ display: 'flex', gap: '6px', marginBottom: '3px' }}>

@@ -852,6 +852,11 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     let eatkm = enemyState.debuffs.filter((d) => d.type === 'atk').reduce((a, d) => a * (d.multiplier ?? 1), 1);
     const ptrd = enemyState.debuffs.filter((d) => d.type === 'tr').reduce((a, d) => a - (d.subtraction ?? 0), 0);
     const etr2 = Math.max(0.4, etr - ptrd);
+    // Enemy DEF debuffs (from player's DEBUFF action)
+    const enemyDefReduction = enemyState.debuffs
+      .filter((d) => d.type === 'def')
+      .reduce((a, d) => a + (d.subtraction ?? 0), 0);
+    const effectiveEnemyDef = Math.max(0, enemyState.def - enemyDefReduction);
 
     // ── Effective player stats (base stats × buff/debuff multipliers) ──
     const playerAtkMult = playerState.buffs
@@ -868,6 +873,11 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const defCap = selectedClass === 'char_three' ? 0.75 : 0.65;
     let effectiveDef = Math.min(defCap, playerState.def + defBonus);
 
+    // Existing shields (from previous rounds)
+    let shieldHp = playerState.buffs
+      .filter((b) => b.type === 'shield')
+      .reduce((a, b) => a + (b.amount ?? 0), 0);
+
     let pdmg = 0;
     let peff = '';
     let edmg = 0;
@@ -882,7 +892,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     if (action === 'attack') {
       const raw = 15 * effectiveAtk * tr * vm;
-      pdmg = Math.max(1, Math.floor(raw * (1 - enemyState.def)));
+      pdmg = Math.max(1, Math.floor(raw * (1 - effectiveEnemyDef)));
       setDamageDealtCount((d) => d + pdmg);
       peff = 'atk';
       // Berserker: Blood Rush — stack ATK on hit
@@ -892,32 +902,51 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         // wrong trade resets blood rush stacks
         nextPlayerBuffs.length = 0;
       }
-      setBattleLog((prev) => [...prev, `⚔️ ATTACK - Raw: ${raw.toFixed(1)}, DEF: ${enemyState.def}, Final: ${pdmg}`]);
+      setBattleLog((prev) => [...prev, `⚔️ ATTACK - Raw: ${raw.toFixed(1)}, DEF: ${effectiveEnemyDef}, Final: ${pdmg}`]);
     } else if (action === 'debuff') {
-      const raw = 10 * effectiveAtk * tr * vm;
-      pdmg = Math.max(1, Math.floor(raw * (1 - enemyState.def)));
-      setDamageDealtCount((d) => d + pdmg);
+      const isAtkDebuff = Math.random() < 0.5;
       const debuffMult = pcorr ? 0.7 : 0.85;
-      const dur = (isRanger && pcorr) ? 3 : pcorr ? 2 : 1;
-      nextEnemyDebuffs.push({ type: 'atk', multiplier: debuffMult, roundsRemaining: dur });
-      // Apply immediately for this round's enemy attack
-      eatkm *= debuffMult;
-      peff = 'deb';
-      setBattleLog((prev) => [...prev, `📉 DEBUFF - Raw: ${raw.toFixed(1)}, DEF: ${enemyState.def}, Final: ${pdmg}`]);
-    } else if (action === 'buff') {
-      // +1 to duration because BUFF has no same-round effect (player already acted)
+      const defReduction = pcorr ? 0.15 : 0.08;
       const dur = (isRanger && pcorr) ? 4 : pcorr ? 3 : 2;
-      nextPlayerBuffs.push({ type: 'atk', multiplier: pcorr ? 1.3 : 1.1, roundsRemaining: dur });
+      // Compute effective enemy DEF including this round's DEF debuff
+      const tempDefDebuff = isAtkDebuff ? 0 : defReduction;
+      const tempEnemyDef = Math.max(0, effectiveEnemyDef - tempDefDebuff);
+      const raw = 10 * effectiveAtk * tr * vm;
+      pdmg = Math.max(1, Math.floor(raw * (1 - tempEnemyDef)));
+      setDamageDealtCount((d) => d + pdmg);
+      if (isAtkDebuff) {
+        nextEnemyDebuffs.push({ type: 'atk', multiplier: debuffMult, roundsRemaining: dur });
+        eatkm *= debuffMult; // Apply immediately for same-round enemy attack
+        setBattleLog((prev) => [...prev, `📉 DEBUFF ATK - ×${debuffMult}, Raw: ${raw.toFixed(1)}, DEF: ${tempEnemyDef}, Final: ${pdmg}`]);
+      } else {
+        nextEnemyDebuffs.push({ type: 'def', subtraction: defReduction, roundsRemaining: dur });
+        setBattleLog((prev) => [...prev, `📉 DEBUFF DEF - -${Math.round(defReduction * 100)}%, Raw: ${raw.toFixed(1)}, DEF: ${tempEnemyDef}, Final: ${pdmg}`]);
+      }
+      peff = 'deb';
+    } else if (action === 'buff') {
+      const isAtkBuff = Math.random() < 0.5;
+      // +1 duration because BUFF has no same-round effect (player already acted)
+      const dur = (isRanger && pcorr) ? 5 : pcorr ? 4 : 3;
+      if (isAtkBuff) {
+        nextPlayerBuffs.push({ type: 'atk', multiplier: pcorr ? 1.3 : 1.1, roundsRemaining: dur });
+        setBattleLog((prev) => [...prev, `⬆️ BUFF ATK - ×${pcorr ? 1.3 : 1.1}`]);
+      } else {
+        const defAmt = pcorr ? 0.15 : 0.08;
+        nextPlayerBuffs.push({ type: 'def', amount: defAmt, roundsRemaining: dur });
+        // Apply immediately for same-round enemy damage
+        defBonus += defAmt;
+        effectiveDef = Math.min(defCap, playerState.def + defBonus);
+        setBattleLog((prev) => [...prev, `⬆️ BUFF DEF - +${Math.round(defAmt * 100)}%`]);
+      }
       peff = 'buf';
       playSound('buff');
-      setBattleLog((prev) => [...prev, `⬆️ BUFF - No direct damage`]);
     } else if (action === 'defend') {
-      const dur = (isRanger && pcorr) ? 3 : pcorr ? 2 : 1;
-      const da = pcorr ? 0.2 : 0.1;
-      nextPlayerBuffs.push({ type: 'def', amount: da, roundsRemaining: dur });
-      // Apply immediately for this round's enemy attack
-      defBonus += da;
-      effectiveDef = Math.min(defCap, playerState.def + defBonus);
+      const shieldBase = pcorr ? 10 : 5;
+      const newShield = Math.max(1, Math.floor(shieldBase * tr * vm));
+      // Minimum 2-round duration, starting from current round
+      const dur = (isRanger && pcorr) ? 4 : pcorr ? 3 : 2;
+      nextPlayerBuffs.push({ type: 'shield', amount: newShield, roundsRemaining: dur });
+      shieldHp += newShield; // Add to total for same-round absorption
       peff = 'def';
       // Shadow Knight: Iron Wall — +5% permanent DEF on correct defend
       if (selectedClass === 'char_three' && pcorr) {
@@ -926,7 +955,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         effectiveDef = Math.min(defCap, playerState.def + defBonus);
       }
       playSound('buff');
-      setBattleLog((prev) => [...prev, `🛡️ DEFEND - No direct damage`]);
+      setBattleLog((prev) => [...prev, `🛡️ DEFEND - Shield ${newShield} HP`]);
     } else if (action === 'hold') {
       // Enchantress: HOLD heals 20 HP; HODL Stone adds 15 on top
       const baseHeal = selectedClass === 'char_five' ? 20 : 0;
@@ -940,6 +969,26 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (aiMove !== 'hold') {
       const raw = 15 * enemyState.atk * eatkm * etr2 * selectedCoin.multiplier;
       edmg = Math.max(1, Math.floor(raw * (1 - effectiveDef)));
+    }
+
+    // Shield absorbs incoming damage (realtime depletion)
+    if (shieldHp > 0 && edmg > 0) {
+      const absorbed = Math.min(shieldHp, edmg);
+      shieldHp -= absorbed;
+      edmg -= absorbed;
+      edmg = Math.max(0, edmg);
+    }
+
+    // Consolidate shield buffs in nextPlayerBuffs after absorption
+    {
+      const existingShieldBuffs = nextPlayerBuffs.filter(b => b.type === 'shield');
+      if (existingShieldBuffs.length > 0) {
+        const maxDur = Math.max(...existingShieldBuffs.map(b => b.roundsRemaining));
+        nextPlayerBuffs = nextPlayerBuffs.filter(b => b.type !== 'shield');
+        if (shieldHp > 0) {
+          nextPlayerBuffs.push({ type: 'shield', amount: shieldHp, roundsRemaining: maxDur });
+        }
+      }
     }
 
     // ── Critical hit ──

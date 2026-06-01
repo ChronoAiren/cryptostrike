@@ -56,7 +56,7 @@ export interface Coin {
 }
 
 export interface BuffDebuff {
-  type: 'atk' | 'def' | 'tr';
+  type: 'atk' | 'def' | 'tr' | 'shield';
   multiplier?: number;
   amount?: number;
   subtraction?: number;
