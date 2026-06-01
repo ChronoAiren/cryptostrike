@@ -261,7 +261,7 @@ export const BattleScreen: React.FC = () => {
             position: 'relative',
             minHeight: rowLayout ? '100%' : '160px',
             background: 'linear-gradient(180deg,#040810 0%,#070F1A 35%,#0A1520 65%,#0C1A28 100%)',
-            overflow: 'hidden',
+            overflow: 'visible',
             borderBottom: rowLayout ? 'none' : '2px solid var(--border-dim)',
             borderRight: rowLayout ? '2px solid var(--border-dim)' : 'none',
           }}
@@ -294,18 +294,28 @@ export const BattleScreen: React.FC = () => {
                 ? 'translateX(-12px)'
                 : 'translateX(0)',
         }}>
-          <FighterSprite
-            characterKey={playerState.spriteKey}
-            equippedItems={equippedItems}
-            overlaySources={user.cosmeticItems.filter(id => OVERLAY_SPRITES[id]).map(id => OVERLAY_SPRITES[id])}
-            pose={playerPose}
-            playing={playerPose === 'idle' || battlePhase === 'res'}
-            loop={playerPose !== 'attack'}
-            isEnemy={false}
-            status={playerState.buffs.length > 0 ? 'buffed' : playerState.debuffs.length > 0 ? 'debuffed' : 'none'}
-            size={80}
-            impact={isPlayerHit}
-          />
+          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', paddingLeft: '34px' }}>
+            <FighterSprite
+              characterKey={playerState.spriteKey}
+              overlaySources={user.cosmeticItems.filter(id => OVERLAY_SPRITES[id]).map(id => OVERLAY_SPRITES[id])}
+              pose={playerPose}
+              playing={playerPose === 'idle' || battlePhase === 'res'}
+              loop={playerPose !== 'attack'}
+              isEnemy={false}
+              status={playerState.buffs.length > 0 ? 'buffed' : playerState.debuffs.length > 0 ? 'debuffed' : 'none'}
+              size={80}
+              impact={isPlayerHit}
+            />
+            {equippedItems.length > 0 && (
+              <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {equippedItems.map(id => (
+                  <div key={id} style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px' }}>
+                    <ItemIcon itemId={id} size={18} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           {/* Player stats panel — HP dominant, combat stats grouped, utility stats lighter */}
           <div style={{
             background: 'var(--gba-bg)', border: '3px solid var(--gba-border)',
@@ -440,17 +450,27 @@ export const BattleScreen: React.FC = () => {
               ))}
             </div>
           </div>
-          <FighterSprite
-            characterKey={enemyState.spriteKey}
-            equippedItems={enemyEquippedItems}
-            pose={enemyPose}
-            playing={enemyPose === 'idle' || battlePhase === 'res'}
-            loop={enemyPose !== 'attack'}
-            isEnemy={true}
-            status={enemyState.buffs.length > 0 ? 'buffed' : enemyState.debuffs.length > 0 ? 'debuffed' : 'none'}
-            size={80}
-            impact={isEnemyHit}
-          />
+          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', paddingRight: '34px' }}>
+            <FighterSprite
+              characterKey={enemyState.spriteKey}
+              pose={enemyPose}
+              playing={enemyPose === 'idle' || battlePhase === 'res'}
+              loop={enemyPose !== 'attack'}
+              isEnemy={true}
+              status={enemyState.buffs.length > 0 ? 'buffed' : enemyState.debuffs.length > 0 ? 'debuffed' : 'none'}
+              size={80}
+              impact={isEnemyHit}
+            />
+            {enemyEquippedItems.length > 0 && (
+              <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {enemyEquippedItems.map(id => (
+                  <div key={id} style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px' }}>
+                    <ItemIcon itemId={id} size={18} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Damage numbers container */}

@@ -24,7 +24,6 @@ const POSE_ROW_MAP: Record<string, number> = {
 
 export interface FighterSpriteProps {
   characterKey: string;
-  equippedItems?: string[];
   overlaySources?: string[];
   pose?: SpriteState;
   frame?: number;
@@ -213,7 +212,6 @@ const ReferenceSprite: React.FC<{
 // ─── Public FighterSprite ─────────────────────────────────────────────────────
 export const FighterSprite: React.FC<FighterSpriteProps> = ({
   characterKey,
-  equippedItems = [],
   overlaySources = [],
   pose = 'idle',
   frame: externalFrame,
@@ -299,29 +297,6 @@ export const FighterSprite: React.FC<FighterSpriteProps> = ({
           </div>
         )}
       </div>
-
-      {/* Equipment badge */}
-      {equippedItems.length > 0 && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: -8,
-            left: -8,
-            width: 20,
-            height: 20,
-            borderRadius: '50%',
-            backgroundColor: '#FFD700',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 12,
-            fontWeight: 'bold',
-            border: '2px solid #fff',
-          }}
-        >
-          {equippedItems.length}
-        </div>
-      )}
     </div>
   );
 };
