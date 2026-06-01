@@ -7,12 +7,10 @@ const SPLASH_DURATION = 2800;
 
 export const SplashScreen: React.FC = () => {
   const { user, setScreen } = useGame();
-  const [started, setStarted] = useState(false);
   const [phase, setPhase] = useState<'enter' | 'idle' | 'exit'>('enter');
   const [dotIdx, setDotIdx] = useState(0);
 
   useEffect(() => {
-    if (!started) return;
     const enter = setTimeout(() => setPhase('idle'), 600);
     const exit = setTimeout(() => setPhase('exit'), SPLASH_DURATION);
     const advance = setTimeout(() => {
@@ -27,15 +25,14 @@ export const SplashScreen: React.FC = () => {
       clearTimeout(advance);
       clearInterval(dots);
     };
-  }, [started, user.username, setScreen]);
+  }, [user.username, setScreen]);
 
   const handleClick = () => {
-    if (!started) return;
     setScreen(user.username ? 'home' : 'welcome');
   };
 
-  const opacity = !started ? 0 : phase === 'enter' ? 0 : phase === 'exit' ? 0 : 1;
-  const blur = !started ? 8 : phase === 'enter' ? 8 : phase === 'exit' ? 4 : 0;
+  const opacity = phase === 'enter' ? 0 : phase === 'exit' ? 0 : 1;
+  const blur = phase === 'enter' ? 8 : phase === 'exit' ? 4 : 0;
 
   return (
     <div
@@ -55,45 +52,6 @@ export const SplashScreen: React.FC = () => {
         filter: `blur(${blur}px)`,
       }}
     >
-      {/* TAP TO START overlay — guarantees a user gesture for BGM autoplay */}
-      {!started && (
-        <div
-          onClick={e => { e.stopPropagation(); setStarted(true); }}
-          style={{
-            position: 'absolute', inset: 0, zIndex: 10,
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer',
-            background: 'linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0d1a2d 100%)',
-            animation: 'fadeIn 0.4s ease',
-          }}
-        >
-          <div style={{
-            fontSize: '32px', marginBottom: '16px', lineHeight: 1,
-            animation: 'popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
-          }}>
-            ⚔️
-          </div>
-          <div style={{
-            fontSize: 'clamp(20px, 5vw, 32px)',
-            fontFamily: 'var(--font-accent)', fontWeight: 700,
-            letterSpacing: '4px',
-            background: 'linear-gradient(135deg, #F3C37D 0%, #93E5B1 100%)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text', marginBottom: '8px',
-          }}>
-            CRYPTOSTRIKE
-          </div>
-          <div style={{
-            fontSize: '12px', color: 'var(--text-muted)',
-            fontFamily: 'var(--font-pixel)',
-            animation: 'fadeIn 0.6s ease 0.3s both',
-          }}>
-            TAP TO START
-          </div>
-        </div>
-      )}
-
       {/* Gradient orbs */}
       <div style={{
         position: 'absolute',
@@ -192,18 +150,17 @@ export const SplashScreen: React.FC = () => {
         </div>
       </div>
 
-      {started && (
-        <div style={{
-          position: 'absolute',
-          bottom: '24px',
-          fontSize: '9px',
-          color: 'var(--text-muted)',
-          opacity: 0.4,
-          animation: 'fadeIn 0.6s ease 1.5s both',
-        }}>
-          Loading{'.'.repeat(dotIdx)}
-        </div>
-      )}
+      {/* Bottom hint */}
+      <div style={{
+        position: 'absolute',
+        bottom: '24px',
+        fontSize: '9px',
+        color: 'var(--text-muted)',
+        opacity: 0.4,
+        animation: 'fadeIn 0.6s ease 1.5s both',
+      }}>
+        Tap anywhere to continue
+      </div>
     </div>
   );
 };
