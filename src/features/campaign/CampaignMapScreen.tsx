@@ -3,7 +3,7 @@ import { useGame, CLASSES } from '../../context/GameStateContext';
 import { CAMPAIGN_CHAPTERS, getStageKey } from '../../data/campaign';
 
 export const CampaignMapScreen: React.FC = () => {
-  const { campaignProgress, selectCampaignStage, goHome, selectedClass, user } = useGame();
+  const { campaignProgress, selectCampaignStage, goHome, user } = useGame();
   const [selectedChapter, setSelectedChapter] = useState(1);
 
   const chapter = CAMPAIGN_CHAPTERS.find(c => c.id === selectedChapter);
@@ -107,10 +107,10 @@ export const CampaignMapScreen: React.FC = () => {
           border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: 10,
         }}>
-          <div style={{ fontSize: 22 }}>{selectedClass ? CLASSES[selectedClass].emoji : '⚔️'}</div>
+          <div style={{ fontSize: 22 }}>{CLASSES['my_character'].emoji}</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 14, fontWeight: 700, color: '#F1F5F9' }}>
-              {selectedClass === 'my_character' ? (user.username || 'My Character') : selectedClass ? CLASSES[selectedClass].name : 'No Class Selected'}
+              {user.username || 'My Character'}
             </div>
             <div style={{ fontSize: 10, color: '#94A3B8' }}>
               Lv.{campaignProgress.level} · {campaignProgress.xp}/{campaignProgress.xpToNext} XP

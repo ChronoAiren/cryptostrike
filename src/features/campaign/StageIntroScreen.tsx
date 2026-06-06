@@ -3,7 +3,7 @@ import { useGame } from '../../context/GameStateContext';
 import { CLASSES, COINS } from '../../context/GameStateContext';
 
 export const StageIntroScreen: React.FC = () => {
-  const { campaign, advanceDialogue, startCampaignBattle, returnToCampaignMap, selectedClass, user, campaignProgress } = useGame();
+  const { campaign, advanceDialogue, startCampaignBattle, returnToCampaignMap, user, campaignProgress } = useGame();
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(true);
 
@@ -190,14 +190,14 @@ export const StageIntroScreen: React.FC = () => {
               borderRadius: '12px',
               border: '2px solid rgba(34, 197, 94, 0.3)',
             }}>
-              {selectedClass ? CLASSES[selectedClass].emoji : '⚔️'}
+              {CLASSES['my_character'].emoji}
             </div>
             <div style={{
               fontSize: '10px',
               color: '#22C55E',
               marginTop: '4px',
             }}>
-              {selectedClass === 'my_character' ? (user.username || 'You') : selectedClass ? CLASSES[selectedClass].name : 'You'} · Lv.{campaignProgress.level}
+              {user.username || 'My Character'} · Lv.{campaignProgress.level}
             </div>
           </div>
 

@@ -16,7 +16,6 @@ export const CampaignEndScreen: React.FC = () => {
     returnToCampaignMap,
     claimCampaignReward,
     restartGame,
-    selectedClass,
     user,
     campaignProgress,
   } = useGame();
@@ -221,10 +220,10 @@ export const CampaignEndScreen: React.FC = () => {
         transition: 'opacity 0.3s ease 0.35s',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ fontSize: 24 }}>{selectedClass ? CLASSES[selectedClass].emoji : '⚔️'}</div>
+          <div style={{ fontSize: 24 }}>{CLASSES['my_character'].emoji}</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 14, fontWeight: 700, color: '#F1F5F9' }}>
-              {selectedClass === 'my_character' ? (user.username || 'My Character') : selectedClass ? CLASSES[selectedClass].name : 'Fighter'}
+              {user.username || 'My Character'}
               <span style={{ color: '#F0B429', marginLeft: 8 }}>Lv.{campaignProgress.level}</span>
             </div>
             <div style={{ marginTop: 4, height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>

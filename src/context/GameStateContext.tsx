@@ -1468,6 +1468,10 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const goToCampaignMap = () => {
     try { playSound('confirm'); } catch {}
+    // Campaign always uses the player's own character
+    if (selectedClass !== 'my_character') {
+      setSelectedClass('my_character');
+    }
     setCampaign(prev => ({
       ...prev,
       isActive: false,
@@ -1514,14 +1518,15 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const startCampaignBattle = () => {
     if (!campaign.selectedStage || !campaign.selectedChapter) return;
-    if (!selectedClass) {
-      setCurrentScreen('classSelect');
-      return;
-    }
     const stage = campaign.selectedStage;
 
     setLoading(true, 'Entering battle...');
     try { playSound('confirm'); } catch {}
+
+    // Force my_character for campaign
+    if (selectedClass !== 'my_character') {
+      setSelectedClass('my_character');
+    }
 
     // Find the coin for this stage
     const stageCoin = COINS.find(c => c.id === stage.coinId);
@@ -1530,7 +1535,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // Force coin selection
     setSelectedCoin(stageCoin);
 
-    // Sum stat bonuses from equipped cosmetic wearables
+    // Sum stat bonuses from cosmetic wearables ONLY (no battle items in campaign)
     let cosmeticAtk = 0;
     let cosmeticDef = 0;
     let cosmeticSpd = 0;
@@ -1543,32 +1548,17 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (s.includes('SPD')) cosmeticSpd += parseInt(s) || 0;
     });
 
-    let atkBonus = 0;
-    let defBonus = 0;
-    let spdBonus = 0;
-
-    equippedItems.forEach((id) => {
-      const it = ITEMS.find((i) => i.id === id);
-      if (it && !it.isActive) {
-        if (it.effect.atk) atkBonus += it.effect.atk;
-        if (it.effect.def) defBonus += it.effect.def;
-        if (it.effect.spd) spdBonus += it.effect.spd;
-      }
-    });
-
-    // Same player setup as goToVS — your character, your stats, your class
-    const clDef = CLASSES[selectedClass];
-    const playerName = selectedClass === 'my_character' ? user.username || 'My Character' : clDef.name;
+    // Campaign uses YOUR character — your stats, your cosmetics, your level bonuses
     const lb = campaignProgress.levelBonuses;
 
     setPlayerState({
-      name: playerName,
-      spriteKey: selectedClass,
+      name: user.username || 'My Character',
+      spriteKey: 'my_character',
       hp: user.baseHp + lb.hp,
       maxHp: user.baseHp + lb.hp,
-      atk: user.baseAtk + lb.atk + cosmeticAtk + atkBonus,
-      def: Math.min(user.baseDef + lb.def + cosmeticDef + defBonus, 0.65),
-      spd: user.baseSpd + lb.spd + cosmeticSpd + spdBonus,
+      atk: user.baseAtk + lb.atk + cosmeticAtk,
+      def: Math.min(user.baseDef + lb.def + cosmeticDef, 0.65),
+      spd: user.baseSpd + lb.spd + cosmeticSpd,
       lk: user.baseLk + lb.lk,
       buffs: [],
       debuffs: [],
@@ -1576,8 +1566,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     // Campaign enemies — bosses use class sprites, normal use base sprite + random dress
     const diffMult = stage.enemy.difficultyMultiplier;
-    const enemyItems = ['sblade', 'barmor', 'nboots'];
-    setEnemyEquippedItems(enemyItems);
+    setEnemyEquippedItems([]);
 
     // Random wearables for enemy visual dressing
     const HEAD_WEAR = ['head1', 'head2', 'head3', 'head4'];
@@ -1608,12 +1597,8 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       debuffs: [],
     });
 
-    // Set up active items
-    const battleItems = equippedItems
-      .map((id) => ITEMS.find((i) => i.id === id))
-      .filter((i): i is Item => !!i && i.isActive)
-      .map((i) => ({ ...i, used: false }));
-    setActiveItems(battleItems);
+    // No active items in campaign — clear them
+    setActiveItems([]);
 
     // Reset battle state
     setRound(1);
