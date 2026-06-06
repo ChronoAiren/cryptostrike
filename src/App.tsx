@@ -18,6 +18,9 @@ import { VSScreen } from './features/battle/VSScreen';
 import { EndScreen } from './features/gameSummary/EndScreen';
 import { SettingsScreen } from './features/settings/SettingsScreen';
 import { VfxTestScreen } from './features/sprites/VfxTestScreen';
+import { CampaignMapScreen } from './features/campaign/CampaignMapScreen';
+import { StageIntroScreen } from './features/campaign/StageIntroScreen';
+import { CampaignEndScreen } from './features/campaign/CampaignEndScreen';
 
 const MainApp: React.FC = () => {
   const { currentScreen } = useGame();
@@ -53,6 +56,12 @@ const MainApp: React.FC = () => {
         return <EndScreen />;
       case 'settings':
         return <SettingsScreen />;
+      case 'campaignMap':
+        return <CampaignMapScreen />;
+      case 'campaignIntro':
+        return <StageIntroScreen />;
+      case 'campaignEnd':
+        return <CampaignEndScreen />;
       default:
         return <SplashScreen />;
     }

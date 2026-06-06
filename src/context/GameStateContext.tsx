@@ -9,6 +9,9 @@ import {
   type DamageReport,
   type BuffDebuff,
 } from '../types/game';
+import type { CampaignStage, CampaignProgress, CampaignState, LevelBonuses } from '../types/campaign';
+import { CAMPAIGN_CHAPTERS, getStageKey } from '../data/campaign';
+import { getCampaignItemById } from '../data/campaignItems';
 import { useAudio } from './AudioContext';
 import { useBattleSounds } from '../features/battle/useBattleSounds';
 import { FREE_ITEM_IDS, getItemCategory, WEARABLES } from '../data/wearables';
@@ -35,7 +38,7 @@ interface UserProfile {
 }
 
 interface GameStateContextProps {
-  currentScreen: 'splash' | 'welcome' | 'home' | 'profile' | 'myCharacter' | 'items' | 'classSelect' | 'itemEquip' | 'coinChoose' | 'vs' | 'battle' | 'end' | 'settings';
+  currentScreen: 'splash' | 'welcome' | 'home' | 'profile' | 'myCharacter' | 'items' | 'classSelect' | 'itemEquip' | 'coinChoose' | 'vs' | 'battle' | 'end' | 'settings' | 'campaignMap' | 'campaignIntro' | 'campaignEnd';
   selectedClass: ClassKey | null;
   equippedItems: string[];
   selectedCoin: Coin | null;
@@ -76,6 +79,7 @@ interface GameStateContextProps {
   user: UserProfile;
 
   selectClass: (key: ClassKey) => void;
+  setSelectedClass: (key: ClassKey | null) => void;
   toggleEquipItem: (id: string) => void;
   selectCoin: (coin: Coin) => void;
   useActiveItem: (id: string) => void;
@@ -91,12 +95,25 @@ interface GameStateContextProps {
   changeClass: () => void;
   setTimerPaused: (paused: boolean) => void;
   setUsername: (name: string) => void;
-  setScreen: (s: 'splash' | 'welcome' | 'home' | 'profile' | 'myCharacter' | 'items' | 'classSelect' | 'settings') => void;
+  setScreen: (s: 'splash' | 'welcome' | 'home' | 'profile' | 'myCharacter' | 'items' | 'classSelect' | 'settings' | 'campaignMap' | 'campaignIntro' | 'campaignEnd') => void;
   updateProfile: (fields: { username?: string; avatar?: string; bio?: string; cosmeticItems?: string[] }) => void;
   toggleCosmeticItem: (id: string) => void;
   purchaseItem: (id: string, currency: 'gold' | 'gems') => void;
   updateVolume: (key: 'bgmVolume' | 'vfxVolume', value: number) => void;
   vfxVolume: number;
+
+  campaign: CampaignState;
+  campaignProgress: CampaignProgress;
+  goToCampaignMap: () => void;
+  selectCampaignStage: (chapterId: number, stageId: number) => void;
+  startCampaignDialogue: () => void;
+  advanceDialogue: () => void;
+  startCampaignBattle: () => void;
+  completeCampaignStage: (victory: boolean) => void;
+  returnToCampaignMap: () => void;
+  claimCampaignReward: (rewardIndex: number) => void;
+  resetCampaignProgress: () => void;
+  enemyCosmeticItems: string[];
 }
 
 const GameContext = createContext<GameStateContextProps | undefined>(undefined);
@@ -257,6 +274,45 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return { username: '', avatar: '⚔️', bio: '', createdAt: '', gamesPlayed: 0, wins: 0, totalDamage: 0, cosmeticItems: [], purchasedItems: [...FREE_ITEM_IDS], gold: 500, gems: 10, bgmVolume: 0.3, vfxVolume: 0.5, baseHp: 80, baseAtk: 1.0, baseDef: 0.08, baseSpd: 45, baseLk: 10 };
   });
 
+  // Campaign progress (persisted)
+  const [campaignProgress, setCampaignProgress] = useState<CampaignProgress>(() => {
+    const defaultBonuses: LevelBonuses = { hp: 0, atk: 0, def: 0, spd: 0, lk: 0 };
+    try {
+      const stored = localStorage.getItem('cryptostrike_campaign');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return {
+          completedStages: parsed.completedStages ?? [],
+          currentChapter: parsed.currentChapter ?? 1,
+          totalXp: parsed.totalXp ?? 0,
+          unlockedChapters: parsed.unlockedChapters ?? [1],
+          level: parsed.level ?? 1,
+          xp: parsed.xp ?? 0,
+          xpToNext: parsed.xpToNext ?? 100,
+          levelBonuses: parsed.levelBonuses ?? { ...defaultBonuses },
+        };
+      }
+    } catch {}
+    return { completedStages: [], currentChapter: 1, totalXp: 0, unlockedChapters: [1], level: 1, xp: 0, xpToNext: 100, levelBonuses: { ...defaultBonuses } };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('cryptostrike_campaign', JSON.stringify(campaignProgress));
+  }, [campaignProgress]);
+
+  // Campaign state (not persisted - session only)
+  const [campaign, setCampaign] = useState<CampaignState>({
+    isActive: false,
+    selectedChapter: null,
+    selectedStage: null,
+    dialogueIndex: 0,
+    progress: campaignProgress,
+  });
+
+  // Campaign rewards queue (for displaying after battle)
+  const [campaignRewards, setCampaignRewards] = useState<{ stage: CampaignStage; victory: boolean } | null>(null);
+  const [enemyCosmeticItems, setEnemyCosmeticItems] = useState<string[]>([]);
+
   useEffect(() => {
     localStorage.setItem('cryptostrike_user', JSON.stringify(user));
   }, [user]);
@@ -316,7 +372,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [setVfxVolume, battleSfx]);
 
-  const setScreen = (s: 'splash' | 'welcome' | 'home' | 'profile' | 'myCharacter' | 'items' | 'classSelect' | 'settings') => {
+  const setScreen = (s: 'splash' | 'welcome' | 'home' | 'profile' | 'myCharacter' | 'items' | 'classSelect' | 'settings' | 'campaignMap' | 'campaignIntro' | 'campaignEnd') => {
     setCurrentScreen(s);
   };
 
@@ -326,7 +382,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   // Screen routing — start at splash, skip welcome if returning user
-  const [currentScreen, setCurrentScreen] = useState<'splash' | 'welcome' | 'home' | 'profile' | 'myCharacter' | 'items' | 'classSelect' | 'itemEquip' | 'coinChoose' | 'vs' | 'battle' | 'end' | 'settings'>(() => {
+  const [currentScreen, setCurrentScreen] = useState<'splash' | 'welcome' | 'home' | 'profile' | 'myCharacter' | 'items' | 'classSelect' | 'itemEquip' | 'coinChoose' | 'vs' | 'battle' | 'end' | 'settings' | 'campaignMap' | 'campaignIntro' | 'campaignEnd'>(() => {
     try {
       const stored = localStorage.getItem('cryptostrike_user');
       if (stored) {
@@ -1373,16 +1429,24 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       if (win) {
         playSound('level');
-        const goldReward = 50 + round * 10;
-        const gemReward = 1;
-        setUser(prev => ({ ...prev, gold: prev.gold + goldReward, gems: prev.gems + gemReward }));
         setWinRecord(true);
       } else {
         playSound('ko');
         setWinRecord(false);
       }
 
-      setCurrentScreen('end');
+      // Campaign mode: go to campaign end screen
+      if (campaign.isActive) {
+        completeCampaignStage(win);
+      } else {
+        // Regular VS AI mode
+        if (win) {
+          const goldReward = 50 + round * 10;
+          const gemReward = 1;
+          setUser(prev => ({ ...prev, gold: prev.gold + goldReward, gems: prev.gems + gemReward }));
+        }
+        setCurrentScreen('end');
+      }
       setTimeout(() => setLoading(false), 200);
     }, 500);
   };
@@ -1398,6 +1462,300 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setEquippedItems([]);
     setSelectedCoin(null);
     setCurrentScreen('classSelect');
+  };
+
+  // ─── CAMPAIGN ACTIONS ──────────────────────────────────────────────────────
+
+  const goToCampaignMap = () => {
+    try { playSound('confirm'); } catch {}
+    setCampaign(prev => ({
+      ...prev,
+      isActive: false,
+      selectedChapter: null,
+      selectedStage: null,
+      dialogueIndex: 0,
+    }));
+    setCurrentScreen('campaignMap');
+  };
+
+  const selectCampaignStage = (chapterId: number, stageId: number) => {
+    const chapter = CAMPAIGN_CHAPTERS.find(c => c.id === chapterId);
+    if (!chapter) return;
+    const stage = chapter.stages.find(s => s.id === stageId);
+    if (!stage) return;
+
+    playSound('select');
+    setCampaign(prev => ({
+      ...prev,
+      isActive: true,
+      selectedChapter: chapter,
+      selectedStage: stage,
+      dialogueIndex: 0,
+      progress: campaignProgress,
+    }));
+    setCurrentScreen('campaignIntro');
+  };
+
+  const startCampaignDialogue = () => {
+    playSound('confirm');
+    setCampaign(prev => ({ ...prev, dialogueIndex: 0 }));
+  };
+
+  const advanceDialogue = () => {
+    if (!campaign.selectedStage) return;
+    const nextIndex = campaign.dialogueIndex + 1;
+    if (nextIndex >= campaign.selectedStage.dialogue.length) {
+      startCampaignBattle();
+    } else {
+      playSound('select');
+      setCampaign(prev => ({ ...prev, dialogueIndex: nextIndex }));
+    }
+  };
+
+  const startCampaignBattle = () => {
+    if (!campaign.selectedStage || !campaign.selectedChapter) return;
+    if (!selectedClass) {
+      setCurrentScreen('classSelect');
+      return;
+    }
+    const stage = campaign.selectedStage;
+
+    setLoading(true, 'Entering battle...');
+    try { playSound('confirm'); } catch {}
+
+    // Find the coin for this stage
+    const stageCoin = COINS.find(c => c.id === stage.coinId);
+    if (!stageCoin) return;
+
+    // Force coin selection
+    setSelectedCoin(stageCoin);
+
+    // Sum stat bonuses from equipped cosmetic wearables
+    let cosmeticAtk = 0;
+    let cosmeticDef = 0;
+    let cosmeticSpd = 0;
+    user.cosmeticItems.forEach(id => {
+      const w = WEARABLES.find(x => x.id === id);
+      if (!w) return;
+      const s = w.statBonus;
+      if (s.includes('ATK')) cosmeticAtk += (parseInt(s) || 0) / 100;
+      if (s.includes('DEF')) cosmeticDef += (parseInt(s) || 0) / 100;
+      if (s.includes('SPD')) cosmeticSpd += parseInt(s) || 0;
+    });
+
+    let atkBonus = 0;
+    let defBonus = 0;
+    let spdBonus = 0;
+
+    equippedItems.forEach((id) => {
+      const it = ITEMS.find((i) => i.id === id);
+      if (it && !it.isActive) {
+        if (it.effect.atk) atkBonus += it.effect.atk;
+        if (it.effect.def) defBonus += it.effect.def;
+        if (it.effect.spd) spdBonus += it.effect.spd;
+      }
+    });
+
+    // Same player setup as goToVS — your character, your stats, your class
+    const clDef = CLASSES[selectedClass];
+    const playerName = selectedClass === 'my_character' ? user.username || 'My Character' : clDef.name;
+    const lb = campaignProgress.levelBonuses;
+
+    setPlayerState({
+      name: playerName,
+      spriteKey: selectedClass,
+      hp: user.baseHp + lb.hp,
+      maxHp: user.baseHp + lb.hp,
+      atk: user.baseAtk + lb.atk + cosmeticAtk + atkBonus,
+      def: Math.min(user.baseDef + lb.def + cosmeticDef + defBonus, 0.65),
+      spd: user.baseSpd + lb.spd + cosmeticSpd + spdBonus,
+      lk: user.baseLk + lb.lk,
+      buffs: [],
+      debuffs: [],
+    });
+
+    // Campaign enemies — bosses use class sprites, normal use base sprite + random dress
+    const diffMult = stage.enemy.difficultyMultiplier;
+    const enemyItems = ['sblade', 'barmor', 'nboots'];
+    setEnemyEquippedItems(enemyItems);
+
+    // Random wearables for enemy visual dressing
+    const HEAD_WEAR = ['head1', 'head2', 'head3', 'head4'];
+    const BODY_WEAR = ['body1', 'body2', 'body3', 'body4'];
+    const BOOTS_WEAR = ['boots1', 'boots2', 'boots3', 'boots4'];
+    const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+    const randomWearCount = Math.floor(Math.random() * 3) + 1;
+    const randomWearables: string[] = [];
+    const slots = [HEAD_WEAR, BODY_WEAR, BOOTS_WEAR].sort(() => Math.random() - 0.5);
+    for (let i = 0; i < randomWearCount && i < slots.length; i++) {
+      randomWearables.push(pick(slots[i]));
+    }
+    setEnemyCosmeticItems(randomWearables);
+
+    // Boss = class sprite; Normal = base character sprite
+    const enemySpriteKey = stage.isBoss ? stage.enemy.classKey : 'my_character';
+
+    setEnemyState({
+      name: stage.enemy.name,
+      spriteKey: enemySpriteKey,
+      hp: Math.floor(stage.enemy.baseHp * diffMult),
+      maxHp: Math.floor(stage.enemy.baseHp * diffMult),
+      atk: stage.enemy.baseAtk * diffMult,
+      def: Math.min(stage.enemy.baseDef * diffMult, 0.65),
+      spd: 50,
+      lk: 10,
+      buffs: [],
+      debuffs: [],
+    });
+
+    // Set up active items
+    const battleItems = equippedItems
+      .map((id) => ITEMS.find((i) => i.id === id))
+      .filter((i): i is Item => !!i && i.isActive)
+      .map((i) => ({ ...i, used: false }));
+    setActiveItems(battleItems);
+
+    // Reset battle state
+    setRound(1);
+    setBattlePhase('rpg');
+    setBattleLog(['Read the live chart. BUY=Attack/Buff | PUT=Defend/Debuff']);
+    setPlayerMove(null);
+    setPlayerRpgAction(null);
+    playerMoveRef.current = null;
+    playerRpgActionRef.current = null;
+    setEnemyMove(null);
+    setCorrectTradesCount(0);
+    setTotalTradesCount(0);
+    setDamageDealtCount(0);
+    setDamageReport(null);
+    setWinRecord(null);
+
+    modsRef.current = {
+      whale: false,
+      ledger: false,
+      airdrop: false,
+      bull: false,
+      hodlBoost: false,
+      comeback: false,
+    };
+
+    setEntryPrice(stageCoin.basePrice);
+    setCurrentPrice(stageCoin.basePrice);
+    setPriceHistory([stageCoin.basePrice]);
+
+    // Start battle after loading
+    setTimeout(() => {
+      setCurrentScreen('vs');
+      setTimeout(() => setLoading(false), 200);
+    }, 500);
+  };
+
+  const completeCampaignStage = (victory: boolean) => {
+    if (!campaign.selectedStage || !campaign.selectedChapter) return;
+
+    const stage = campaign.selectedStage;
+    const chapter = campaign.selectedChapter;
+    const stageKey = getStageKey(chapter.id, stage.id);
+
+    setCampaignRewards({ stage, victory });
+
+    if (victory) {
+      // Mark stage as completed
+      setCampaignProgress(prev => {
+        const newCompleted = [...prev.completedStages];
+        if (!newCompleted.includes(stageKey)) {
+          newCompleted.push(stageKey);
+        }
+
+        // Unlock next stage or chapter
+        const newUnlocked = [...prev.unlockedChapters];
+        if (stage.isBoss && !newUnlocked.includes(chapter.id + 1)) {
+          newUnlocked.push(chapter.id + 1);
+        }
+
+        return {
+          ...prev,
+          completedStages: newCompleted,
+          totalXp: prev.totalXp + (stage.rewards.find(r => r.type === 'xp')?.amount || 0),
+          unlockedChapters: newUnlocked,
+        };
+      });
+    }
+
+    setCurrentScreen('campaignEnd');
+  };
+
+  const returnToCampaignMap = () => {
+    playSound('confirm');
+    setCampaignRewards(null);
+    setCampaign({
+      isActive: false,
+      selectedChapter: null,
+      selectedStage: null,
+      dialogueIndex: 0,
+      progress: campaignProgress,
+    });
+    setCurrentScreen('campaignMap');
+  };
+
+  const claimCampaignReward = (rewardIndex: number) => {
+    if (!campaignRewards) return;
+    const reward = campaignRewards.stage.rewards[rewardIndex];
+    if (!reward) return;
+
+    playSound('buff');
+
+    switch (reward.type) {
+      case 'gold':
+        setUser(prev => ({ ...prev, gold: prev.gold + (reward.amount || 0) }));
+        break;
+      case 'gems':
+        setUser(prev => ({ ...prev, gems: prev.gems + (reward.amount || 0) }));
+        break;
+      case 'xp': {
+        const xpGain = reward.amount || 0;
+        setCampaignProgress(prev => {
+          let newXp = prev.xp + xpGain;
+          let newLevel = prev.level;
+          let newXpToNext = prev.xpToNext;
+          const newBonuses = { ...prev.levelBonuses };
+
+          while (newXp >= newXpToNext) {
+            newXp -= newXpToNext;
+            newLevel++;
+            newXpToNext = Math.floor(newXpToNext * 1.25);
+
+            // Pick ONE random stat, boost by 1-5 flat points
+            const stats = ['hp', 'atk', 'def', 'spd', 'lk'] as const;
+            const picked = stats[Math.floor(Math.random() * stats.length)];
+            const roll = Math.floor(Math.random() * 5) + 1;
+            newBonuses[picked] += roll;
+          }
+
+          return { ...prev, xp: newXp, level: newLevel, xpToNext: newXpToNext, levelBonuses: newBonuses };
+        });
+        break;
+      }
+      case 'item':
+        if (reward.itemId) {
+          const item = getCampaignItemById(reward.itemId);
+          if (item) {
+            setUser(prev => ({
+              ...prev,
+              purchasedItems: [...prev.purchasedItems, reward.itemId!],
+            }));
+          }
+        }
+        break;
+    }
+  };
+
+  const resetCampaignProgress = () => {
+    playSound('confirm');
+    const fresh: CampaignProgress = { completedStages: [], currentChapter: 1, totalXp: 0, unlockedChapters: [1], level: 1, xp: 0, xpToNext: 100, levelBonuses: { hp: 0, atk: 0, def: 0, spd: 0, lk: 0 } };
+    setCampaignProgress(fresh);
+    setCampaign({ isActive: false, selectedChapter: null, selectedStage: null, dialogueIndex: 0, progress: fresh });
+    setCampaignRewards(null);
   };
 
   // Clear timers on unmount
@@ -1454,6 +1812,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         loadingState,
         setLoading,
         selectClass,
+        setSelectedClass,
         toggleEquipItem,
         selectCoin,
         useActiveItem,
@@ -1476,6 +1835,18 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         purchaseItem,
         updateVolume,
         vfxVolume: user.vfxVolume,
+        campaign,
+        campaignProgress,
+        goToCampaignMap,
+        selectCampaignStage,
+        startCampaignDialogue,
+        advanceDialogue,
+        startCampaignBattle,
+        completeCampaignStage,
+        returnToCampaignMap,
+        claimCampaignReward,
+        resetCampaignProgress,
+        enemyCosmeticItems,
       }}
     >
       {children}

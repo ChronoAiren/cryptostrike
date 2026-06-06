@@ -28,7 +28,6 @@ const MENU_ITEMS = [
     subtitle: 'Story-driven adventure mode',
     gradient: 'linear-gradient(135deg, #5D597A 0%, #3D3960 100%)',
     glow: 'rgba(93, 89, 122, 0.25)',
-    disabled: true,
   },
   {
     key: 'myCharacter',
@@ -60,30 +59,28 @@ const Card: React.FC<{
       <div
         onClick={onClick}
         style={{
-          background: item.disabled ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.03)',
-          border: item.disabled ? '1.5px solid rgba(255,255,255,0.05)' : '1.5px solid rgba(255,255,255,0.08)',
+          background: 'rgba(255,255,255,0.03)',
+          border: '1.5px solid rgba(255,255,255,0.08)',
           borderRadius: '20px',
           padding: isCampaign ? '18px' : '14px 20px',
-          cursor: item.disabled ? 'not-allowed' : 'pointer',
+          cursor: 'pointer',
           display: 'flex',
           flexDirection: isCampaign ? 'column' : 'row',
           alignItems: isCampaign ? 'center' : 'center',
           justifyContent: isCampaign ? 'center' : 'flex-start',
           gap: '14px',
           transition: 'all 0.2s ease',
-          opacity: item.disabled ? 0.4 : 1,
+          opacity: 1,
           gridColumn: isCampaign ? '1 / -1' : 'auto',
           minHeight: isCampaign ? '80px' : 'auto',
           position: 'relative',
           overflow: 'hidden',
         }}
         onMouseEnter={e => {
-          if (item.disabled) return;
           e.currentTarget.style.borderColor = 'rgba(243, 195, 125, 0.25)';
           e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
         }}
         onMouseLeave={e => {
-          if (item.disabled) return;
           e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
           e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
         }}
@@ -93,7 +90,7 @@ const Card: React.FC<{
           width: isCampaign ? '56px' : '40px',
           height: isCampaign ? '56px' : '40px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: item.disabled ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.04)',
+          background: 'rgba(255,255,255,0.04)',
           borderRadius: '14px', flexShrink: 0,
         }}>
           {item.icon}
@@ -103,7 +100,7 @@ const Card: React.FC<{
             fontSize: isCampaign ? '18px' : '13px',
             fontWeight: 700, fontFamily: 'var(--font-accent)',
             letterSpacing: '1.5px',
-            color: item.disabled ? 'var(--text-muted)' : 'var(--text-primary)',
+            color: 'var(--text-primary)',
             marginBottom: '3px',
           }}>
             {item.title}
@@ -112,15 +109,6 @@ const Card: React.FC<{
             {item.subtitle}
           </div>
         </div>
-        {item.disabled && (
-          <div style={{
-            fontSize: '7px', fontFamily: 'var(--font-pixel)', color: 'var(--text-muted)',
-            background: 'rgba(255,255,255,0.04)', padding: '3px 6px', borderRadius: '4px',
-            letterSpacing: '0.5px', marginTop: isCampaign ? '8px' : '0',
-          }}>
-            WIP
-          </div>
-        )}
       </div>
     );
   }
@@ -129,22 +117,20 @@ const Card: React.FC<{
     <div
       onClick={onClick}
       style={{
-        background: item.disabled ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.03)',
-        border: item.disabled ? '1.5px solid rgba(255,255,255,0.05)' : '1.5px solid rgba(255,255,255,0.08)',
+        background: 'rgba(255,255,255,0.03)',
+        border: '1.5px solid rgba(255,255,255,0.08)',
         borderRadius: '16px', padding: '18px 20px',
-        cursor: item.disabled ? 'not-allowed' : 'pointer',
+        cursor: 'pointer',
         display: 'flex', alignItems: 'center', gap: '16px',
-        transition: 'all 0.2s ease', opacity: item.disabled ? 0.45 : 1,
+        transition: 'all 0.2s ease', opacity: 1,
         animation: `slideUp 0.4s ease ${0.1 + i * 0.1}s both`,
         position: 'relative', overflow: 'hidden',
       }}
       onMouseEnter={e => {
-        if (item.disabled) return;
         e.currentTarget.style.borderColor = 'rgba(243, 195, 125, 0.25)';
         e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
       }}
       onMouseLeave={e => {
-        if (item.disabled) return;
         e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
         e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
       }}
@@ -152,7 +138,7 @@ const Card: React.FC<{
       <div style={{
         fontSize: '28px', width: '44px', height: '44px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: item.disabled ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.04)',
+        background: 'rgba(255,255,255,0.04)',
         borderRadius: '12px', flexShrink: 0,
       }}>
         {item.icon}
@@ -160,7 +146,7 @@ const Card: React.FC<{
       <div style={{ flex: 1 }}>
         <div style={{
           fontSize: '15px', fontWeight: 700, fontFamily: 'var(--font-accent)',
-          letterSpacing: '1.5px', color: item.disabled ? 'var(--text-muted)' : 'var(--text-primary)',
+          letterSpacing: '1.5px', color: 'var(--text-primary)',
           marginBottom: '2px',
         }}>
           {item.title}
@@ -169,23 +155,13 @@ const Card: React.FC<{
           {item.subtitle}
         </div>
       </div>
-      {item.disabled ? (
-        <div style={{
-          fontSize: '7px', fontFamily: 'var(--font-pixel)', color: 'var(--text-muted)',
-          background: 'rgba(255,255,255,0.04)', padding: '3px 6px', borderRadius: '4px',
-          letterSpacing: '0.5px',
-        }}>
-          WIP
-        </div>
-      ) : (
-        <div style={{ color: 'var(--color-gold)', fontSize: '16px' }}>→</div>
-      )}
+      <div style={{ color: 'var(--color-gold)', fontSize: '16px' }}>→</div>
     </div>
   );
 };
 
 export const HomeScreen: React.FC = () => {
-  const { user, setScreen } = useGame();
+  const { user, setScreen, goToCampaignMap } = useGame();
   const desktop = useMediaQuery('(min-width: 769px)');
   const landscape = useMediaQuery('(orientation: landscape)');
   const compact = desktop || landscape;
@@ -193,6 +169,7 @@ export const HomeScreen: React.FC = () => {
   const handleNav = (key: string) => {
     if (key === 'myCharacter') setScreen('myCharacter');
     else if (key === 'items') setScreen('items');
+    else if (key === 'campaign') goToCampaignMap();
     else setScreen('classSelect');
   };
 

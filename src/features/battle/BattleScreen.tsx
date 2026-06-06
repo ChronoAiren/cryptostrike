@@ -66,6 +66,7 @@ export const BattleScreen: React.FC = () => {
     selectedCoin,
     equippedItems,
     enemyEquippedItems,
+    enemyCosmeticItems,
     damageReport,
     isPlayerAttacking,
     isEnemyAttacking,
@@ -259,7 +260,7 @@ export const BattleScreen: React.FC = () => {
           style={{
             flex: rowLayout ? '0 0 40%' : '0 0 auto',
             position: 'relative',
-            minHeight: rowLayout ? '100%' : '160px',
+            minHeight: rowLayout ? '100%' : '220px',
             background: 'linear-gradient(180deg,#040810 0%,#070F1A 35%,#0A1520 65%,#0C1A28 100%)',
             overflow: 'visible',
             borderBottom: rowLayout ? 'none' : '2px solid var(--border-dim)',
@@ -453,6 +454,7 @@ export const BattleScreen: React.FC = () => {
           <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', paddingRight: '34px' }}>
             <FighterSprite
               characterKey={enemyState.spriteKey}
+              overlaySources={enemyCosmeticItems.filter(id => OVERLAY_SPRITES[id]).map(id => OVERLAY_SPRITES[id])}
               pose={enemyPose}
               playing={enemyPose === 'idle' || battlePhase === 'res'}
               loop={enemyPose !== 'attack'}
