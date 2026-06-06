@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGame } from '../../context/GameStateContext';
+import { TAGS, getTagRarityColor } from '../../data/tags';
 
 const AVATARS = ['⚔️', '❄️', '🌿', '🌑', '🔥', '🌸', '🤖', '👾', '🦊', '🐉', '🧙', '🦇', '🦅', '🐺', '🦈', '🐲', '🎭', '💀'];
 
@@ -8,15 +9,16 @@ export const ProfileScreen: React.FC = () => {
   const [name, setName] = useState(user.username);
   const [bio, setBio] = useState(user.bio);
   const [avatar, setAvatar] = useState(user.avatar);
+  const [selectedTag, setSelectedTag] = useState(user.currentTag);
   const [saved, setSaved] = useState(false);
 
   const valid = name.trim().length >= 2 && name.trim().length <= 16;
   const charCount = name.trim().length;
-  const dirty = name !== user.username || bio !== user.bio || avatar !== user.avatar;
+  const dirty = name !== user.username || bio !== user.bio || avatar !== user.avatar || selectedTag !== user.currentTag;
 
   const handleSave = () => {
     if (!valid) return;
-    updateProfile({ username: name.trim(), avatar, bio: bio.trim() });
+    updateProfile({ username: name.trim(), avatar, bio: bio.trim(), currentTag: selectedTag });
     setSaved(true);
     setTimeout(() => setSaved(false), 1400);
   };
@@ -217,6 +219,61 @@ export const ProfileScreen: React.FC = () => {
             marginTop: '3px',
           }}>
             {bio.length}/120
+          </div>
+        </div>
+
+        {/* Tag selector */}
+        <div style={{ flexShrink: 0 }}>
+          <label style={{
+            fontSize: '8px',
+            color: 'var(--text-muted)',
+            fontFamily: 'var(--font-pixel)',
+            letterSpacing: '0.5px',
+            marginBottom: '6px',
+            display: 'block',
+          }}>
+            TITLE
+          </label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            <div
+              onClick={() => setSelectedTag('')}
+              style={{
+                fontSize: '8px', fontFamily: 'var(--font-pixel)',
+                padding: '5px 10px', borderRadius: '8px',
+                cursor: 'pointer', letterSpacing: '0.5px',
+                background: selectedTag === '' ? 'rgba(243, 195, 125, 0.12)' : 'rgba(255,255,255,0.02)',
+                border: selectedTag === '' ? '1.5px solid rgba(243, 195, 125, 0.3)' : '1.5px solid rgba(255,255,255,0.06)',
+                color: selectedTag === '' ? 'var(--color-gold)' : 'var(--text-muted)',
+              }}
+            >
+              None
+            </div>
+            {TAGS.map(tag => {
+              const unlocked = user.unlockedTags.includes(tag.id);
+              const rarityColor = getTagRarityColor(tag.rarity);
+              return (
+                <div
+                  key={tag.id}
+                  onClick={() => unlocked && setSelectedTag(tag.id)}
+                  style={{
+                    fontSize: '8px', fontFamily: 'var(--font-pixel)',
+                    padding: '5px 10px', borderRadius: '8px',
+                    cursor: unlocked ? 'pointer' : 'not-allowed',
+                    letterSpacing: '0.5px',
+                    background: selectedTag === tag.id
+                      ? `${rarityColor}20`
+                      : unlocked ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.2)',
+                    border: selectedTag === tag.id
+                      ? `1.5px solid ${rarityColor}60`
+                      : '1.5px solid rgba(255,255,255,0.06)',
+                    color: unlocked ? rarityColor : 'var(--text-muted)',
+                    opacity: unlocked ? 1 : 0.4,
+                  }}
+                >
+                  {tag.emoji} {tag.name}
+                </div>
+              );
+            })}
           </div>
         </div>
 

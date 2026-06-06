@@ -67,6 +67,7 @@ export const BattleScreen: React.FC = () => {
     equippedItems,
     enemyEquippedItems,
     enemyCosmeticItems,
+    enemyPassiveDesc,
     damageReport,
     isPlayerAttacking,
     isEnemyAttacking,
@@ -433,6 +434,11 @@ export const BattleScreen: React.FC = () => {
               <span className="gba-name">{enemyState.name.toUpperCase()}</span>
               <span className="gba-lv">Lv{Math.ceil(enemyState.hp / 20)}</span>
             </div>
+            {enemyPassiveDesc && (
+              <div style={{ fontSize: '7px', color: '#A855F7', marginTop: '2px', lineHeight: 1.2, opacity: 0.9 }}>
+                {enemyPassiveDesc}
+              </div>
+            )}
             <div className="gba-hp-row">
               <span className="gba-hp-lbl">HP</span>
               <div className="gba-bar-bg">

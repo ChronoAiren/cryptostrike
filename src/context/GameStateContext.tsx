@@ -35,6 +35,8 @@ interface UserProfile {
   baseDef: number;
   baseSpd: number;
   baseLk: number;
+  currentTag: string;
+  unlockedTags: string[];
 }
 
 interface GameStateContextProps {
@@ -96,7 +98,7 @@ interface GameStateContextProps {
   setTimerPaused: (paused: boolean) => void;
   setUsername: (name: string) => void;
   setScreen: (s: 'splash' | 'welcome' | 'home' | 'profile' | 'myCharacter' | 'items' | 'classSelect' | 'settings' | 'campaignMap' | 'campaignIntro' | 'campaignEnd') => void;
-  updateProfile: (fields: { username?: string; avatar?: string; bio?: string; cosmeticItems?: string[] }) => void;
+  updateProfile: (fields: { username?: string; avatar?: string; bio?: string; cosmeticItems?: string[]; currentTag?: string }) => void;
   toggleCosmeticItem: (id: string) => void;
   purchaseItem: (id: string, currency: 'gold' | 'gems') => void;
   updateVolume: (key: 'bgmVolume' | 'vfxVolume', value: number) => void;
@@ -114,6 +116,7 @@ interface GameStateContextProps {
   claimCampaignReward: (rewardIndex: number) => void;
   resetCampaignProgress: () => void;
   enemyCosmeticItems: string[];
+  enemyPassiveDesc: string;
 }
 
 const GameContext = createContext<GameStateContextProps | undefined>(undefined);
@@ -268,10 +271,12 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           baseDef: parsed.baseDef ?? 0.08,
           baseSpd: parsed.baseSpd ?? 45,
           baseLk: parsed.baseLk ?? 10,
+          currentTag: parsed.currentTag ?? '',
+          unlockedTags: parsed.unlockedTags ?? [],
         };
       }
     } catch {}
-    return { username: '', avatar: '⚔️', bio: '', createdAt: '', gamesPlayed: 0, wins: 0, totalDamage: 0, cosmeticItems: [], purchasedItems: [...FREE_ITEM_IDS], gold: 500, gems: 10, bgmVolume: 0.3, vfxVolume: 0.5, baseHp: 80, baseAtk: 1.0, baseDef: 0.08, baseSpd: 45, baseLk: 10 };
+    return { username: '', avatar: '⚔️', bio: '', createdAt: '', gamesPlayed: 0, wins: 0, totalDamage: 0, cosmeticItems: [], purchasedItems: [...FREE_ITEM_IDS], gold: 500, gems: 10, bgmVolume: 0.3, vfxVolume: 0.5, baseHp: 80, baseAtk: 1.0, baseDef: 0.08, baseSpd: 45, baseLk: 10, currentTag: '', unlockedTags: [] };
   });
 
   // Campaign progress (persisted)
@@ -326,7 +331,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setCurrentScreen('home');
   };
 
-  const updateProfile = (fields: { username?: string; avatar?: string; bio?: string; cosmeticItems?: string[] }) => {
+  const updateProfile = (fields: { username?: string; avatar?: string; bio?: string; cosmeticItems?: string[]; currentTag?: string }) => {
     setUser(prev => ({ ...prev, ...fields }));
   };
 
@@ -433,7 +438,15 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     bull: false,
     hodlBoost: false,
     comeback: false,
+    enemyComeback: false,
+    enemyBloodrushStacks: 0,
+    enemyRoundCount: 0,
   });
+
+  // Enemy passive key for campaign battles
+  const enemyPassiveKeyRef = useRef<string>('');
+  const enemyPassiveDescRef = useRef<string>('');
+  const isBossRef = useRef<boolean>(false);
 
   /** Avoid stale closures when market timer resolves (15s after action pick) */
   const playerRpgActionRef = useRef<'attack' | 'buff' | 'defend' | 'debuff' | 'hold' | null>(null);
@@ -735,6 +748,9 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       bull: false,
       hodlBoost: false,
       comeback: false,
+      enemyComeback: false,
+      enemyBloodrushStacks: 0,
+      enemyRoundCount: 0,
     };
     playerRpgActionRef.current = null;
     playerMoveRef.current = null;
@@ -1028,12 +1044,25 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     // Enemy trade result
     const ecorr = (aiMove === 'call' && up) || (aiMove === 'put' && !up) || aiMove === 'hold';
-    const etr = aiMove === 'hold' ? 1.0 : (ecorr ? 1.0 + prof * 0.8 : 0.5);
+    let etr = aiMove === 'hold' ? 1.0 : (ecorr ? 1.0 + prof * 0.8 : 0.5);
+
+    // ── Enemy Passive: Alpha Entry — correct trade profit bonus ──
+    const epKey = enemyPassiveKeyRef.current;
+    const isBossEnemy = isBossRef.current;
+    if (ecorr && aiMove !== 'hold') {
+      if (epKey === 'alpha') etr = 1.0 + prof * (isBossEnemy ? 1.4 : 1.2);
+    }
 
     // ── Volatility multiplier ──
-    // Blood Knight & char_six: EXTREME coins ×1.25 bonus on top of coin's own ×2.0
+    // Player Blood Knight: EXTREME coins ×1.25 bonus
+    // Enemy Send It: EXTREME coins ×1.5/×2.0/×2.5 bonus
     const isExtreme = selectedCoin.volatilityText === 'EXTREME';
-    const vm = selectedCoin.multiplier * (selectedClass === 'char_six' && isExtreme ? 1.25 : 1);
+    const playerVm = selectedCoin.multiplier * (selectedClass === 'char_six' && isExtreme ? 1.25 : 1);
+    let enemyVm = selectedCoin.multiplier;
+    if (epKey === 'sendit' && isExtreme) {
+      enemyVm *= isBossEnemy ? (isBossEnemy && epKey === 'sendit' && enemyState.hp / enemyState.maxHp < 0.5 ? 2.5 : 2.0) : 1.5;
+    }
+    const vm = playerVm;
 
     // Enemy debuffs
     let eatkm = enemyState.debuffs.filter((d) => d.type === 'atk').reduce((a, d) => a * (d.multiplier ?? 1), 1);
@@ -1154,11 +1183,86 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setBattleLog((prev) => [...prev, holdHeal > 0 ? `💚 HOLD - Healed ${holdHeal} HP` : `💚 HOLD - No damage dealt`]);
     }
 
+    // ── Enemy Passive Effects ──
+    let nextEnemyBuffs = [...enemyState.buffs];
+    let enemyHeal = 0;
+
+    // Enemy Send It: Comeback mechanic — force correct trade when low HP
+    if (epKey === 'sendit' && !modsRef.current.enemyComeback) {
+      const comebackThreshold = isBossEnemy ? 0.25 : 0.15;
+      if (enemyState.hp / enemyState.maxHp < comebackThreshold) {
+        // Force enemy's next trade to be correct by adjusting etr
+        if (aiMove !== 'hold') etr = Math.max(etr, 1.5);
+        modsRef.current.enemyComeback = true;
+        setBattleLog((prev) => [...prev, `🔴 ${enemyState.name} triggers COMEBACK!`]);
+      }
+    }
+
+    // Enemy Iron Wall: DEF stacking on correct defend
+    if (epKey === 'ironwall' && aiMove === 'put' && ecorr) {
+      const defGain = isBossEnemy ? 0.08 : 0.03;
+      nextEnemyBuffs.push({ type: 'def', amount: defGain, roundsRemaining: 999 });
+      setBattleLog((prev) => [...prev, `🛡️ ${enemyState.name} gains +${Math.round(defGain * 100)}% DEF (Iron Wall)`]);
+    }
+
+    // Enemy Blood Rush: ATK stacking on successful hits
+    if (epKey === 'bloodrush' && aiMove !== 'hold' && ecorr) {
+      const atkGain = isBossEnemy ? 0.05 : 0.03;
+      const atkCap = isBossEnemy ? 1.6 : 1.4;
+      modsRef.current.enemyBloodrushStacks += 1;
+      const totalGain = Math.min(atkGain * modsRef.current.enemyBloodrushStacks, atkCap - 1.0);
+      if (totalGain > 0) {
+        nextEnemyBuffs = nextEnemyBuffs.filter(b => !(b.type === 'atk' && b.multiplier));
+        nextEnemyBuffs.push({ type: 'atk', multiplier: 1.0 + totalGain, roundsRemaining: 999 });
+      }
+      setBattleLog((prev) => [...prev, `⚔️ ${enemyState.name} Blood Rush ×${(1 + totalGain).toFixed(2)}`]);
+    } else if (epKey === 'bloodrush' && aiMove !== 'hold' && !ecorr) {
+      // Wrong trade resets blood rush
+      modsRef.current.enemyBloodrushStacks = 0;
+      nextEnemyBuffs = nextEnemyBuffs.filter(b => !(b.type === 'atk' && b.multiplier));
+    }
+
+    // Enemy Fortune: HOLD heals and enhanced crit
+    if (epKey === 'fortune' && aiMove === 'hold') {
+      enemyHeal = isBossEnemy ? 20 : 10;
+      setBattleLog((prev) => [...prev, `💚 ${enemyState.name} holds and heals ${enemyHeal} HP`]);
+    }
+
+    // Enemy Research: Extend buff/debuff durations on correct trade
+    if (epKey === 'research' && ecorr && aiMove !== 'hold') {
+      const ext = isBossEnemy ? 2 : 1;
+      nextEnemyBuffs = nextEnemyBuffs.map(b =>
+        b.roundsRemaining < 999 ? { ...b, roundsRemaining: b.roundsRemaining + ext } : b
+      );
+      nextEnemyDebuffs = nextEnemyDebuffs.map(d =>
+        d.roundsRemaining < 999 ? { ...d, roundsRemaining: d.roundsRemaining + ext } : d
+      );
+    }
+
+    // Apply enemy buffs
+    const effectiveEnemyAtkMult = nextEnemyBuffs
+      .filter((b) => b.type === 'atk' && b.multiplier)
+      .reduce((a, b) => a * (b.multiplier ?? 1), 1);
+
     // Enemy damage
+    let enemyAtkMod = eatkm * effectiveEnemyAtkMult;
+    let enemyTrMod = etr2;
     if (aiMove !== 'hold') {
-      const raw = 15 * enemyState.atk * eatkm * etr2 * selectedCoin.multiplier;
+      const raw = 15 * enemyState.atk * enemyAtkMod * enemyTrMod * enemyVm;
       edmg = Math.max(1, Math.floor(raw * (1 - effectiveDef)));
     }
+
+    // Enemy Fortune: enhanced crit for enemy
+    if (epKey === 'fortune' && aiMove !== 'hold' && ecorr) {
+      const enemyCritChance = isBossEnemy ? enemyState.lk * 2 : enemyState.lk * 1.5;
+      if (enemyCritChance > 25 && Math.random() < enemyCritChance / 200) {
+        edmg = Math.floor(edmg * 1.5);
+        setBattleLog((prev) => [...prev, `💥 ${enemyState.name} lands a CRITICAL HIT!`]);
+      }
+    }
+
+    // Enemy heal from Fortune
+    const healedEnemyHp = Math.min(enemyState.maxHp, enemyState.hp + enemyHeal);
 
     // Shield absorbs incoming damage (realtime depletion)
     if (shieldHp > 0 && edmg > 0) {
@@ -1189,7 +1293,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       playSound('crit');
     }
 
-    const newEnemyHp = Math.max(0, enemyState.hp - pdmg);
+    const newEnemyHp = Math.max(0, healedEnemyHp - pdmg);
     const healedPlayerHp = Math.min(playerState.maxHp, playerState.hp + holdHeal);
     const newPlayerHp = Math.max(0, healedPlayerHp - edmg);
 
@@ -1197,7 +1301,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setBattleLog((prev) => [...prev, `   Enemy HP ${enemyState.hp} → ${newEnemyHp} | Your HP ${playerState.hp} → ${newPlayerHp}`]);
 
     setEnemyState((prev) =>
-      prev ? { ...prev, hp: newEnemyHp, debuffs: nextEnemyDebuffs } : null
+      prev ? { ...prev, hp: newEnemyHp, buffs: nextEnemyBuffs, debuffs: nextEnemyDebuffs } : null
     );
     setPlayerState((prev) =>
       prev ? { ...prev, hp: newPlayerHp, buffs: nextPlayerBuffs } : null
@@ -1420,12 +1524,46 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     setLoading(true, 'Resolving battle...');
     setTimeout(() => {
-      setUser(prev => ({
-        ...prev,
-        gamesPlayed: prev.gamesPlayed + 1,
-        wins: prev.wins + (win ? 1 : 0),
-        totalDamage: prev.totalDamage + damageDealtCount,
-      }));
+      setUser(prev => {
+        const newTags = new Set(prev.unlockedTags);
+        let newCurrentTag = prev.currentTag;
+
+        // First battle win
+        if (win && !newTags.has('first_blood')) {
+          newTags.add('first_blood');
+          if (!newCurrentTag) newCurrentTag = 'first_blood';
+        }
+
+        // VS AI wins
+        if (win && !campaign.isActive) {
+          const newWins = prev.wins + 1;
+          if (newWins >= 10) newTags.add('bull_veteran');
+        }
+
+        // Speedrunner: win in 3 rounds or less
+        if (win && round <= 3) {
+          newTags.add('speedrunner');
+        }
+
+        // Iron Will: win without taking damage
+        if (win && playerState && playerState.hp === playerState.maxHp) {
+          newTags.add('iron_will');
+        }
+
+        // Level-based tags
+        if (campaignProgress.level >= 5) newTags.add('level_5');
+        if (campaignProgress.level >= 10) newTags.add('level_10');
+        if (campaignProgress.level >= 15) newTags.add('level_15');
+
+        return {
+          ...prev,
+          gamesPlayed: prev.gamesPlayed + 1,
+          wins: prev.wins + (win ? 1 : 0),
+          totalDamage: prev.totalDamage + damageDealtCount,
+          unlockedTags: [...newTags],
+          currentTag: newCurrentTag,
+        };
+      });
 
       if (win) {
         playSound('level');
@@ -1568,21 +1706,30 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const diffMult = stage.enemy.difficultyMultiplier;
     setEnemyEquippedItems([]);
 
-    // Random wearables for enemy visual dressing
+    // Random wearables for enemy visual dressing (non-boss only)
     const HEAD_WEAR = ['head1', 'head2', 'head3', 'head4'];
     const BODY_WEAR = ['body1', 'body2', 'body3', 'body4'];
     const BOOTS_WEAR = ['boots1', 'boots2', 'boots3', 'boots4'];
     const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
-    const randomWearCount = Math.floor(Math.random() * 3) + 1;
-    const randomWearables: string[] = [];
-    const slots = [HEAD_WEAR, BODY_WEAR, BOOTS_WEAR].sort(() => Math.random() - 0.5);
-    for (let i = 0; i < randomWearCount && i < slots.length; i++) {
-      randomWearables.push(pick(slots[i]));
+    if (!stage.isBoss) {
+      const randomWearCount = Math.floor(Math.random() * 3) + 1;
+      const randomWearables: string[] = [];
+      const slots = [HEAD_WEAR, BODY_WEAR, BOOTS_WEAR].sort(() => Math.random() - 0.5);
+      for (let i = 0; i < randomWearCount && i < slots.length; i++) {
+        randomWearables.push(pick(slots[i]));
+      }
+      setEnemyCosmeticItems(randomWearables);
+    } else {
+      setEnemyCosmeticItems([]);
     }
-    setEnemyCosmeticItems(randomWearables);
 
     // Boss = class sprite; Normal = base character sprite
     const enemySpriteKey = stage.isBoss ? stage.enemy.classKey : 'my_character';
+
+    // Store enemy passive info for battle resolution
+    enemyPassiveKeyRef.current = stage.enemy.passiveKey;
+    enemyPassiveDescRef.current = stage.enemy.passiveDesc;
+    isBossRef.current = stage.isBoss;
 
     setEnemyState({
       name: stage.enemy.name,
@@ -1591,8 +1738,8 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       maxHp: Math.floor(stage.enemy.baseHp * diffMult),
       atk: stage.enemy.baseAtk * diffMult,
       def: Math.min(stage.enemy.baseDef * diffMult, 0.65),
-      spd: 50,
-      lk: 10,
+      spd: Math.floor(stage.enemy.baseSpd * diffMult),
+      lk: Math.floor(stage.enemy.baseLk * diffMult),
       buffs: [],
       debuffs: [],
     });
@@ -1622,6 +1769,9 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       bull: false,
       hodlBoost: false,
       comeback: false,
+      enemyComeback: false,
+      enemyBloodrushStacks: 0,
+      enemyRoundCount: 0,
     };
 
     setEntryPrice(stageCoin.basePrice);
@@ -1664,6 +1814,35 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           totalXp: prev.totalXp + (stage.rewards.find(r => r.type === 'xp')?.amount || 0),
           unlockedChapters: newUnlocked,
         };
+      });
+
+      // Award tags based on campaign progress
+      setUser(prev => {
+        const newTags = new Set(prev.unlockedTags);
+        let newCurrentTag = prev.currentTag;
+
+        // First battle win
+        if (!newTags.has('first_blood')) {
+          newTags.add('first_blood');
+          if (!newCurrentTag) newCurrentTag = 'first_blood';
+        }
+
+        // Boss defeats
+        if (stage.name === 'The Bear King') newTags.add('bear_slayer');
+        if (stage.name === 'The Liquidator') newTags.add('liquidator_fallen');
+        if (stage.name === 'The Market Maker') newTags.add('market_maker_defeated');
+
+        // Chapter completions (boss stages)
+        if (stage.isBoss && chapter.id === 1) newTags.add('diamond_hands');
+        if (stage.isBoss && chapter.id === 2) newTags.add('bull_market_survivor');
+
+        // Perfect run — all 18 stages completed
+        const allStages = ['1-1','1-2','1-3','1-4','1-5','1-6','2-1','2-2','2-3','2-4','2-5','2-6','3-1','3-2','3-3','3-4','3-5','3-6'];
+        if (allStages.every(s => newTags.has(s) || [...newTags].includes(s))) {
+          // Check via campaign progress instead
+        }
+
+        return { ...prev, unlockedTags: [...newTags], currentTag: newCurrentTag };
       });
     }
 
@@ -1832,6 +2011,7 @@ export const GameStateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         claimCampaignReward,
         resetCampaignProgress,
         enemyCosmeticItems,
+        enemyPassiveDesc: enemyPassiveDescRef.current,
       }}
     >
       {children}

@@ -64,26 +64,56 @@ When XP is claimed and `xp >= xpToNext`:
 
 ## Enemy Design
 
-### Boss Enemies (6 total — end of each chapter)
+### Enemy Passives
 
-- Use **other character class sprites** (Ice Mage, Shadow Knight, Berserker, Blood Knight, etc.)
+Every campaign enemy has a **passive ability** matching their class. Enemies use weaker versions of player passives. Bosses get enhanced versions.
+
+| Passive | Normal Enemy | Boss (Enhanced) |
+|---------|-------------|-----------------|
+| **alpha** (Ice Mage) | Correct trade 1.2x profit | 1.4x profit |
+| **research** (Forest Ranger) | Buffs/debuffs +1 duration on correct | +2 duration |
+| **ironwall** (Shadow Knight) | DEF cap 70%, +3% DEF per correct defend | DEF cap 80%, +8% per defend |
+| **bloodrush** (Berserker) | +0.03 ATK per hit (cap 1.4x) | +0.05 ATK per hit (cap 1.6x) |
+| **fortune** (Enchantress) | HOLD heals 10 HP, LCK x1.5 for crit | HOLD heals 20, LCK x2 crit |
+| **sendit** (Blood Knight) | EXTREME x1.5 bonus, comeback at 15% HP | EXTREME x2.0, comeback at 25% HP |
+
+### Boss Enemies (3 total — end of each chapter)
+
+- Use **their class sprites** (Shadow Knight for Bear King, Blood Knight for Liquidator/Market Maker)
 - Stats defined in `campaign.ts` with `difficultyMultiplier` scaling
-- Displayed with their class name and emoji on the campaign map
-- Get random cosmetic wearables overlaid (visual variety)
+- Enhanced passive abilities (see table above)
+- No random wearables (they use class sprites)
+- The Market Maker (final boss) has the strongest version: EXTREME x2.5, comeback at 30% HP, +0.05 ATK every 3 rounds
 
-### Normal Enemies (12 total — non-boss stages)
+### Normal Enemies (15 total — non-boss stages)
 
 - Use the **base character sprite** (`my_character`) — same body as the player
-- Dressed with **1-3 random cosmetic wearables** (helmets, armor, boots) so each enemy looks visually distinct
+- Dressed with **1-3 random cosmetic wearables** (helmets, armor, boots) for visual variety
 - Stats defined in `campaign.ts` with `difficultyMultiplier` scaling
-- On the campaign map, their class emoji/name is shown as flavor, but in battle they appear as a dressed-up base character
+- Each has a passive ability matching their class (weaker than boss versions)
 
-### Random Wearable Assignment
+### Enemy Stats (with passives applied)
 
-For each battle, `startCampaignBattle` randomly picks:
-- 1-3 wearables from the pool `['head1'..'head4', 'body1'..'body4', 'boots1'..'boots4']`
-- One per slot category (head, body, boots), shuffled order
-- Stored in `enemyCosmeticItems` state, passed to BattleScreen's enemy `FighterSprite` as `overlaySources`
+| Stage | Enemy | HP | ATK | DEF | SPD | LK | Passive | DiffMult |
+|-------|-------|----|-----|-----|-----|----|---------|----------|
+| 1-1 | Rookie Trader | 80 | 0.90 | 0.06 | 45 | 25 | research | 1.00 |
+| 1-2 | Day Trader | 70 | 1.00 | 0.04 | 60 | 15 | alpha | 1.05 |
+| 1-3 | HODLer | 100 | 0.80 | 0.15 | 40 | 10 | ironwall | 1.10 |
+| 1-4 | FOMO Trader | 80 | 1.15 | 0.05 | 55 | 20 | bloodrush | 1.15 |
+| 1-5 | Whale Scout | 90 | 1.00 | 0.10 | 50 | 30 | fortune | 1.20 |
+| **1-6** | **The Bear King** | **140** | **1.15** | **0.20** | **40** | **10** | **ironwall** | **1.30** |
+| 2-1 | Bear Raider | 85 | 1.20 | 0.08 | 55 | 20 | bloodrush | 1.25 |
+| 2-2 | The Shorter | 75 | 1.30 | 0.05 | 60 | 15 | alpha | 1.30 |
+| 2-3 | Capitulator | 90 | 1.10 | 0.10 | 50 | 10 | sendit | 1.35 |
+| 2-4 | FUD Spreader | 80 | 1.10 | 0.09 | 50 | 30 | fortune | 1.40 |
+| 2-5 | Margin Trader | 100 | 1.20 | 0.11 | 45 | 25 | research | 1.45 |
+| **2-6** | **The Liquidator** | **160** | **1.30** | **0.15** | **50** | **10** | **sendit** | **1.50** |
+| 3-1 | Flash Trader | 90 | 1.30 | 0.08 | 60 | 15 | alpha | 1.55 |
+| 3-2 | The Algorithm | 85 | 1.25 | 0.10 | 45 | 25 | research | 1.60 |
+| 3-3 | Whale Trader | 120 | 1.10 | 0.18 | 40 | 10 | ironwall | 1.65 |
+| 3-4 | Manipulator | 95 | 1.35 | 0.06 | 55 | 20 | bloodrush | 1.70 |
+| 3-5 | The Insider | 100 | 1.30 | 0.12 | 50 | 30 | fortune | 1.75 |
+| **3-6** | **The Market Maker** | **180** | **1.45** | **0.20** | **50** | **10** | **sendit** | **2.00** |
 
 ---
 
@@ -135,6 +165,7 @@ Home Screen
 | `src/types/campaign.ts` | TypeScript interfaces: `CampaignProgress`, `CampaignState`, `CampaignStage`, `LevelBonuses` |
 | `src/data/campaign.ts` | 3 chapters x 6 stages with dialogue, enemy configs, rewards, difficulty multipliers |
 | `src/data/campaignItems.ts` | 12 campaign-exclusive items (4 per chapter) |
+| `src/data/tags.ts` | 14 achievement tags with rarity, emoji, and unlock conditions |
 | `src/context/GameStateContext.tsx` | Campaign state, actions (`goToCampaignMap`, `selectCampaignStage`, `startCampaignBattle`, `completeCampaignStage`, `claimCampaignReward`), level-up logic |
 | `src/features/campaign/CampaignMapScreen.tsx` | Campaign hub — chapter tabs, stage list, player character display |
 | `src/features/campaign/StageIntroScreen.tsx` | Pre-battle dialogue with typewriter effect |
@@ -152,3 +183,44 @@ Home Screen
 4. **Level bonuses are campaign-only** — stored in `CampaignProgress.levelBonuses`, never written to `UserProfile`.
 5. **Bosses use class sprites, normals use base sprite** — `spriteKey` is `stage.enemy.classKey` for bosses, `'my_character'` for normals.
 6. **XP is auto-claimed** — gold/gems/items require manual claiming.
+7. **Enemy passives are active** — each enemy has a passive ability matching their class, applied during battle resolution.
+8. **Tags/Titles are earned** — players earn display tags for achievements, shown on the home screen.
+
+---
+
+## Tag/Title System
+
+Players earn **tags** (display titles) for completing achievements. Tags are shown on the home screen below the username.
+
+### Available Tags
+
+| ID | Name | Emoji | Rarity | Unlock Condition |
+|----|------|-------|--------|-----------------|
+| `first_blood` | First Blood | 🩸 | Common | Win your first battle |
+| `bull_veteran` | Bull Veteran | 🐂 | Common | Win 10 VS AI battles |
+| `level_5` | Rising Star | ⭐ | Common | Reach campaign level 5 |
+| `speedrunner` | Speedrunner | ⏱️ | Common | Win a battle in 3 rounds or less |
+| `bear_slayer` | Bear Slayer | 🐻 | Common | Defeat The Bear King |
+| `diamond_hands` | Diamond Hands | 💎 | Rare | Complete Chapter 1 |
+| `iron_will` | Iron Will | 🛡️ | Rare | Win a battle without taking damage |
+| `liquidator_fallen` | Liquidator's Bane | ⚔️ | Rare | Defeat The Liquidator |
+| `bull_market_survivor` | Bull Market Survivor | 📈 | Rare | Complete Chapter 2 |
+| `whale_hunter` | Whale Hunter | 🐋 | Rare | Beat all whale-themed enemies |
+| `level_10` | Veteran Trader | 🏆 | Rare | Reach campaign level 10 |
+| `market_maker_defeated` | Market Conqueror | 👑 | Legendary | Defeat The Market Maker |
+| `perfect_run` | Perfect Run | ✨ | Legendary | Complete all 18 stages |
+| `level_15` | Elite Trader | 💰 | Legendary | Reach campaign level 15 |
+
+### Tag Mechanics
+
+- Tags are stored in `user.unlockedTags` (array of tag IDs)
+- `user.currentTag` holds the currently displayed tag ID
+- Tags are awarded automatically on battle completion (`endBattle`) and stage completion (`completeCampaignStage`)
+- Players can change their displayed tag in the Profile screen
+- Tags auto-assign to the newest earned tag if the player hasn't customized their selection
+
+### Tag Display
+
+- Home screen shows the tag as a colored pill below the username
+- Rarity colors: Common = grey, Rare = purple, Legendary = gold
+- Profile screen shows all unlocked tags as selectable pills, locked tags greyed out with unlock hints

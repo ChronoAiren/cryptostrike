@@ -17,6 +17,10 @@ export interface CampaignStage {
     baseHp: number;
     baseAtk: number;
     baseDef: number;
+    baseSpd: number;
+    baseLk: number;
+    passiveKey: string;
+    passiveDesc: string;
     difficultyMultiplier: number;
   };
   coinId: string;

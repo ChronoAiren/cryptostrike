@@ -1,5 +1,6 @@
 import React from 'react';
 import { useGame } from '../../context/GameStateContext';
+import { getTagById, getTagRarityColor } from '../../data/tags';
 
 function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = React.useState(() => window.matchMedia(query).matches);
@@ -248,6 +249,22 @@ export const HomeScreen: React.FC = () => {
               ⚙️
             </span>
           </div>
+          {user.currentTag && (() => {
+            const tag = getTagById(user.currentTag);
+            if (!tag) return null;
+            return (
+              <div style={{
+                fontSize: '8px', fontFamily: 'var(--font-pixel)',
+                color: getTagRarityColor(tag.rarity),
+                background: `${getTagRarityColor(tag.rarity)}15`,
+                border: `1px solid ${getTagRarityColor(tag.rarity)}40`,
+                borderRadius: '8px', padding: '3px 10px',
+                marginTop: '6px', letterSpacing: '0.5px',
+              }}>
+                {tag.emoji} {tag.name}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Balance bar */}
